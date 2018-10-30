@@ -13,13 +13,10 @@
 
 namespace mkdt {
 
-struct service_identifier : std::string {
-    using std::string::string;
-};
+using service_identifier = std::string;
 
-struct object_identifier : boost::uuids::uuid {
-    using boost::uuids::uuid::uuid;
-};
+using object_identifier = boost::uuids::uuid;
+
 
 class registry {
 public:
