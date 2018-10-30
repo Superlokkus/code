@@ -11,6 +11,8 @@ include_directories(${Boost_INCLUDE_DIR})
 set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/src/registry.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/registry.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/router.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/router.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})

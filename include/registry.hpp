@@ -2,8 +2,8 @@
  *
  */
 
-#ifndef MKDT_INTERFACE_HPP
-#define MKDT_INTERFACE_HPP
+#ifndef MKDT_REGISTRY_HPP
+#define MKDT_REGISTRY_HPP
 
 #include <string>
 #include <future>
@@ -22,20 +22,26 @@ class registry {
 public:
 
     template<typename Service>
-    std::future<void> register_service(service_identifier component, std::shared_ptr<Service> service);
+    std::future<void> register_service(service_identifier service_id, std::shared_ptr<Service> service);
 
     template<typename ServiceInterfaceStub>
     std::future<ServiceInterfaceStub> get_service_interface(service_identifier service_id);
 
     template<typename Object>
-    std::future<object_identifier> publish(std::shared_ptr<Object> object);
+    std::future<object_identifier> expose(std::shared_ptr<Object> object, service_identifier service_id);
 
     template<typename Object>
-    std::future<Object> subscribe(object_identifier object_id);
+    std::future<Object> consume(object_identifier object);
+
+    std::future<void> send_message(object_identifier to_object, std::shared_ptr<std::string> message);
+
+    void receive_message(std::function<void(std::string)> callback);
+
+
 
 };
 
 
 }
 
-#endif
+#endif //MKDT_REGISTRY_HPP
