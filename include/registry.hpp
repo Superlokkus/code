@@ -8,6 +8,7 @@
 #include <string>
 #include <future>
 #include <memory>
+#include <functional>
 
 #include <boost/uuid/uuid.hpp>
 
@@ -17,25 +18,26 @@ using service_identifier = std::string;
 
 using object_identifier = boost::uuids::uuid;
 
+using incoming_callback = std::function<void (std::string)>;
+
+using object_handle = boost::uuids::uuid;
+
 
 class registry {
 public:
 
-    template<typename Service>
-    std::future<void> register_service(service_identifier service_id, std::shared_ptr<Service> service);
+    std::future<void> register_service(service_identifier service_id,
+                                       incoming_callback incoming_message_callback);
 
-    template<typename ServiceInterfaceStub>
-    std::future<ServiceInterfaceStub> get_service_interface(service_identifier service_id);
+    std::future<void> use_service_interface(service_identifier service_id, std::string message);
 
-    template<typename Object>
-    std::future<object_identifier> expose(std::shared_ptr<Object> object, service_identifier service_id);
+    std::future<object_identifier> expose(service_identifier service_id,
+                                          incoming_callback incoming_message_callback);
 
-    template<typename Object>
-    std::future<Object> consume(object_identifier object);
+    std::future<object_handle> consume(object_identifier object);
 
-    std::future<void> send_message(object_identifier to_object, std::shared_ptr<std::string> message);
+    std::future<void> send_message_to_object(object_handle object, std::string message);
 
-    void receive_message(std::function<void(std::string)> callback);
 
 
 
