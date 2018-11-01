@@ -13,6 +13,8 @@ set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/registry.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/router.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/router.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/object_remoting_mockup.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/object_remoting_mockup.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})
