@@ -8,7 +8,7 @@ mkdt::object_remoting_mockup::client_stub::client_stub() {
 
 }
 
-std::string mkdt::object_remoting_mockup::client_stub::example_method_1(std::string input1, int input2) {
+std::string mkdt::object_remoting_mockup::client_stub::example_method_1(const std::string &input1, int input2) {
     return std::string();
 }
 
@@ -20,7 +20,7 @@ mkdt::object_remoting_mockup::server_stub::server_stub() {
 
 }
 
-std::string mkdt::object_remoting_mockup::server_stub::example_method_1(std::string input1, int input2) {
+std::string mkdt::object_remoting_mockup::server_stub::example_method_1(const std::string &input1, int input2) {
     return std::string();
 }
 

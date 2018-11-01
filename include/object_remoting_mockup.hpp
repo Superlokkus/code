@@ -23,20 +23,22 @@ public:
      * @returns to_string(example_member) + input1 + to_string(input2)
      * @throws std::runtime_error if input2 == 42
      */
-    virtual std::string example_method_1(std::string input1, int input2) = 0;
+    virtual std::string example_method_1(const std::string &input1, int input2) = 0;
 
     /*! @brief Increases the example_member by 1
      *
      */
     virtual void example_method_2(void) noexcept = 0;
 
-    unsigned example_member{42};
+    virtual unsigned example_member() noexcept = 0;
+
+    virtual void set_example_member(unsigned value) = 0;
 };
 
 class client_stub : public interface {
     client_stub();
 
-    std::string example_method_1(std::string input1, int input2) override;
+    std::string example_method_1(const std::string &input1, int input2) override;
 
     void example_method_2(void) noexcept override;
 };
@@ -44,7 +46,7 @@ class client_stub : public interface {
 class server_stub : public interface {
     server_stub();
 
-    std::string example_method_1(std::string input1, int input2) override;
+    std::string example_method_1(const std::string &input1, int input2) override;
 
     void example_method_2(void) noexcept override;
 };
