@@ -20,24 +20,30 @@ using object_identifier = boost::uuids::uuid;
 
 using incoming_callback = std::function<void (std::string)>;
 
-using object_handle = boost::uuids::uuid;
+class object_handle final {
+public:
+    std::future<void> send(std::string message);
+
+    std::future<void> recieve(incoming_callback incoming_message_callback);
+
+private:
+    boost::uuids::uuid id;
+    service_identifier service_id;
+};
 
 
-class registry {
+class registry final {
 public:
 
     std::future<void> register_service(service_identifier service_id,
                                        incoming_callback incoming_message_callback);
 
-    std::future<void> use_service_interface(service_identifier service_id, std::string message);
+    std::future<object_handle> use_service_interface(service_identifier service_id);
 
     std::future<object_identifier> expose(service_identifier service_id,
                                           incoming_callback incoming_message_callback);
 
     std::future<object_handle> consume(object_identifier object);
-
-    std::future<void> send_message_to_object(object_handle object, std::string message);
-
 
 
 
