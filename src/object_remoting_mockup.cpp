@@ -14,17 +14,26 @@
 
 template<typename Message_Type>
 struct rpc_message_base {
-    static constexpr const char *const magic_message_start_text = u8"mkdt_object_remoting_mockup_protocol";
-    static constexpr const unsigned version_major = 1;
-    static constexpr const unsigned version_minor = 0;
+    static const char *const magic_message_start_text;
+    static const unsigned version_major;
+    static const unsigned version_minor;
 
     using parameter_type = boost::variant<std::string, unsigned>;
 
-    static constexpr const char *const magic_message_end_text = u8"mkdt_end";
+    static const char *const magic_message_end_text;
 };
 
+template<typename Message_Type>
+const char *const rpc_message_base<Message_Type>::magic_message_start_text{u8"mkdt_object_remoting_mockup_protocol"};
+template<typename Message_Type>
+const unsigned rpc_message_base<Message_Type>::version_major{1};
+template<typename Message_Type>
+const unsigned rpc_message_base<Message_Type>::version_minor{0};
+template<typename Message_Type>
+const char *const rpc_message_base<Message_Type>::magic_message_end_text{u8"mkdt_end"};
+
 struct rpc_request : rpc_message_base<rpc_request> {
-    static constexpr const char *const magic_rpc_request_phrase = u8"request";
+    static const char *const magic_rpc_request_phrase;
     enum struct member_function_type {
         example_method_1,
         example_method_2,
@@ -36,8 +45,10 @@ struct rpc_request : rpc_message_base<rpc_request> {
     std::vector<parameter_type> parameters;
 };
 
+const char *const rpc_request::magic_rpc_request_phrase{u8"request"};
+
 struct rpc_response : rpc_message_base<rpc_response> {
-    static constexpr const char *const magic_rpc_reponse_phrase = u8"response";
+    static const char *const magic_rpc_reponse_phrase;
     using exception_text = std::string;
     bool is_exception;
     /*! @brief Holds either the return value to the called function or a parameter for the exception, in both
@@ -46,6 +57,8 @@ struct rpc_response : rpc_message_base<rpc_response> {
      */
     boost::optional<parameter_type> return_value;
 };
+
+const char *const magic_rpc_reponse_phrase{u8"response"};
 
 using rpc_message = boost::variant<rpc_request, rpc_response>;
 
@@ -235,22 +248,22 @@ mkdt::object_remoting_mockup::client_stub::client_stub() {
 
 }
 
-std::string
+std::future<std::string>
 mkdt::object_remoting_mockup::client_stub::example_method_1(const std::string &input1, unsigned int input2) {
-    return std::string{};
+    return {};
 }
 
-void mkdt::object_remoting_mockup::client_stub::example_method_2(void) noexcept {
-
+std::future<void> mkdt::object_remoting_mockup::client_stub::example_method_2(void) noexcept {
+    return {};
 }
 
 
-unsigned int mkdt::object_remoting_mockup::client_stub::example_member() noexcept {
-    return 0;
+std::future<unsigned int> mkdt::object_remoting_mockup::client_stub::example_member() noexcept {
+    return {};
 }
 
-void mkdt::object_remoting_mockup::client_stub::set_example_member(unsigned value) {
-
+std::future<void> mkdt::object_remoting_mockup::client_stub::set_example_member(unsigned value) {
+    return {};
 }
 
 std::string mkdt::object_remoting_mockup::client_stub::handle_incoming_data(std::string input) {
@@ -265,31 +278,53 @@ mkdt::object_remoting_mockup::server_stub::server_stub() : example_member_{1337}
 
 }
 
-std::string
+std::future<std::string>
 mkdt::object_remoting_mockup::server_stub::example_method_1(const std::string &input1, unsigned int input2) {
-    std::string value{std::to_string(this->example_member())};
-    value + input1;
-    value + std::to_string(input2);
+    std::packaged_task<std::string()> task([&]() {
+        std::string value{std::to_string(this->example_member_)};
+        value + input1;
+        value + std::to_string(input2);
 
-    if (input2 == 42)
-        throw std::runtime_error{"Input2 was equal 42"};
+        if (input2 == 42)
+            throw std::runtime_error{"Input2 was equal 42"};
 
-    return value;
+        return value;
+    });
+    task();
+    return task.get_future();
 }
 
-void mkdt::object_remoting_mockup::server_stub::example_method_2(void) noexcept {
+std::future<void> mkdt::object_remoting_mockup::server_stub::example_method_2(void) noexcept {
+    std::promise<void> promise;
+    promise.set_value();
     this->example_member_ += 1;
+    return promise.get_future();
 }
 
-unsigned mkdt::object_remoting_mockup::server_stub::example_member() noexcept {
-    return this->example_member_;
+std::future<unsigned int> mkdt::object_remoting_mockup::server_stub::example_member() noexcept {
+    std::promise<unsigned> value;
+    value.set_value(this->example_member_);
+    return value.get_future();
 }
 
-void mkdt::object_remoting_mockup::server_stub::set_example_member(unsigned value) {
+std::future<void> mkdt::object_remoting_mockup::server_stub::set_example_member(unsigned value) {
+    std::promise<void> return_promise;
+    return_promise.set_value();
     this->example_member_ = value;
+    return return_promise.get_future();
 }
 
 std::string mkdt::object_remoting_mockup::server_stub::handle_incoming_data(std::string input) {
+    rpc_request_grammar<std::string::const_iterator> grammar{};
+    rpc_request request;
+    auto begin = input.cbegin();
+    auto end = input.cend();
+    auto success = boost::spirit::qi::phrase_parse(begin, end, grammar,
+                                                   boost::spirit::standard::space, request);
+
+    if (!success)
+        throw std::runtime_error(std::string{"Request not readable after"} + std::string{begin, end});
+
     return std::string{};
 }
 
