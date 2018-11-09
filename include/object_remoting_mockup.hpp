@@ -34,9 +34,9 @@ public:
     /*! @brief Increases the example_member by 1
      *
      */
-    virtual std::future<void> example_method_2(void) noexcept = 0;
+    virtual std::future<void> example_method_2(void) = 0;
 
-    virtual std::future<unsigned int> example_member() noexcept = 0;
+    virtual std::future<unsigned int> example_member() = 0;
 
     virtual std::future<void> set_example_member(unsigned value) = 0;
 };
@@ -44,6 +44,7 @@ public:
 class example_api_rpc : public example_api {
 public:
     virtual void handle_incoming_data(std::string input) = 0;
+
     virtual void set_sending_callback(std::function<void(std::string)> send_callback) = 0;
 };
 
@@ -63,7 +64,7 @@ struct rpc_request {
 
 struct rpc_response {
     using exception_text = std::string;
-    bool is_exception;
+    bool is_exception{false};
     /*! @brief Holds either the return value to the called function or a parameter for the exception, in both
      * cases optional
      *
@@ -73,15 +74,22 @@ struct rpc_response {
 
 using rpc_message = boost::variant<rpc_request, rpc_response>;
 
+/*! @brief Stub to issue calls to a remote object, set_sending_callback has to set or std::badcall is thrown
+ * when the example methods are called
+ *
+ */
 class client_stub : public example_api_rpc {
 public:
+    /*! @brief Sets example_member to 1337
+     *
+     */
     client_stub();
 
     std::future<std::string> example_method_1(const std::string &input1, unsigned int input2) override;
 
-    std::future<void> example_method_2(void) noexcept override;
+    std::future<void> example_method_2(void) override;
 
-    std::future<unsigned int> example_member() noexcept override;
+    std::future<unsigned int> example_member() override;
 
     std::future<void> set_example_member(unsigned value) override;
 
@@ -91,7 +99,7 @@ public:
 
 private:
     std::function<void(std::string)> send_callback_;
-    boost::optional<boost::variant<std::promise<void>, std::promise<unsigned>>> last_promise_;
+    boost::optional<boost::variant<std::promise<void>, std::promise<unsigned>, std::promise<std::string>>> last_promise_;
 
 };
 
@@ -101,9 +109,9 @@ public:
 
     std::future<std::string> example_method_1(const std::string &input1, unsigned int input2) override;
 
-    std::future<void> example_method_2(void) noexcept override;
+    std::future<void> example_method_2(void) override;
 
-    std::future<unsigned int> example_member() noexcept override;
+    std::future<unsigned int> example_member() override;
 
     std::future<void> set_example_member(unsigned value) override;
 

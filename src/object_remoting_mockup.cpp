@@ -5,6 +5,7 @@
 #include <object_remoting_mockup.hpp>
 
 #include <stdexcept>
+#include <iterator>
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
@@ -145,13 +146,14 @@ struct generate_rpc_request_grammar : boost::spirit::karma::grammar<OutputIterat
                                                                << lit(u8".")
                                                                << lit(u8"0")
                                                                << lit(u8" ")
-                                                               << lit(u8"request")
-                                                               << lit(u8" ")
-                                                               << member_function_type_gen_
-                                                               << lit(u8" ")
-                                                               << -(common_generators<OutputIterator>::parameter_type_ %
+                << lit(u8"request")
+                << lit(u8" ")
+                << member_function_type_gen_
+                << lit(u8" ")
+                << -(common_generators<OutputIterator>::parameter_type_ %
                                                                     u8",")
-                                                               << lit(u8"mkdt_end");
+                << lit(u8" ")
+                << lit(u8"mkdt_end");
 
     }
 
@@ -167,14 +169,15 @@ struct generate_rpc_response_grammar : boost::spirit::karma::grammar<OutputItera
         start = lit(u8"mkdt_object_remoting_mockup_protocol") << lit(u8" ")
                                                               << lit(u8"1")
                                                               << lit(u8".")
-                                                              << lit(u8"0")
-                                                              << lit(u8" ")
-                                                              << lit(u8"response")
-                                                              << lit(u8" ")
-                                                              << bool_
-                                                              << lit(u8" ")
-                                                              << -common_generators<OutputIterator>::parameter_type_
-                                                              << lit(u8"mkdt_end");
+                << lit(u8"0")
+                << lit(u8" ")
+                << lit(u8"response")
+                << lit(u8" ")
+                << bool_
+                << lit(u8" ")
+                << -common_generators<OutputIterator>::parameter_type_
+                << lit(u8" ")
+                << lit(u8"mkdt_end");
 
     }
 
@@ -207,27 +210,93 @@ struct generate_rpc_response_grammar<std::back_insert_iterator<std::string>>;
 }
 
 
-
 mkdt::object_remoting_mockup::client_stub::client_stub() {
 
 }
 
 std::future<std::string>
 mkdt::object_remoting_mockup::client_stub::example_method_1(const std::string &input1, unsigned int input2) {
-    return {};
+    rpc_request request;
+
+    request.function_to_call = rpc_request::member_function_type::example_method_1;
+    request.parameters.emplace_back(std::string{input1});
+    request.parameters.emplace_back(input2);
+
+    std::string output;
+    generate_rpc_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    if (!success)
+        throw std::runtime_error("Request generation failed");
+
+    std::promise<std::string> promise;
+    auto future = promise.get_future();
+    this->last_promise_ = std::move(promise);
+
+    this->send_callback_(output);
+
+    return future;
 }
 
-std::future<void> mkdt::object_remoting_mockup::client_stub::example_method_2(void) noexcept {
-    return {};
+std::future<void> mkdt::object_remoting_mockup::client_stub::example_method_2(void) {
+    rpc_request request;
+
+    request.function_to_call = rpc_request::member_function_type::example_method_2;
+
+    std::string output;
+    generate_rpc_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    if (!success)
+        throw std::runtime_error("Request generation failed");
+
+    std::promise<void> promise;
+    auto future = promise.get_future();
+    this->last_promise_ = std::move(promise);
+
+    this->send_callback_(output);
+
+    return future;
 }
 
 
-std::future<unsigned int> mkdt::object_remoting_mockup::client_stub::example_member() noexcept {
-    return {};
+std::future<unsigned int> mkdt::object_remoting_mockup::client_stub::example_member() {
+    rpc_request request;
+
+    request.function_to_call = rpc_request::member_function_type::example_member_get;
+
+    std::string output;
+    generate_rpc_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    if (!success)
+        throw std::runtime_error("Request generation failed");
+
+    std::promise<unsigned> promise;
+    auto future = promise.get_future();
+    this->last_promise_ = std::move(promise);
+
+    this->send_callback_(output);
+
+    return future;
 }
 
 std::future<void> mkdt::object_remoting_mockup::client_stub::set_example_member(unsigned value) {
-    return {};
+    rpc_request request;
+
+    request.function_to_call = rpc_request::member_function_type::example_member_set;
+
+    request.parameters.emplace_back(value);
+    std::string output;
+    generate_rpc_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    if (!success)
+        throw std::runtime_error("Request generation failed");
+
+    std::promise<void> promise;
+    auto future = promise.get_future();
+    this->last_promise_ = std::move(promise);
+
+    this->send_callback_(output);
+
+    return future;
 }
 
 void mkdt::object_remoting_mockup::client_stub::handle_incoming_data(std::string input) {
@@ -254,7 +323,38 @@ void mkdt::object_remoting_mockup::client_stub::handle_incoming_data(std::string
         } catch (...) {
             promise.set_exception(std::current_exception());
         }
-
+    } else if (last_promise.which() == 1) {
+        auto &&promise = boost::get<std::promise<unsigned>>(last_promise);
+        try {
+            if (parse_success && !response.is_exception) {
+                promise.set_value(boost::get<unsigned>(response.return_value.value()));
+            } else if (!parse_success) {
+                throw std::runtime_error(std::string{"Repsonse malformed: "} +
+                                         std::string{begin, end});
+            } else {
+                throw std::runtime_error(boost::get<std::string>(
+                        response.return_value.value_or(
+                                parameter_type{std::string{"Exception returned"}})));
+            }
+        } catch (...) {
+            promise.set_exception(std::current_exception());
+        }
+    } else if (last_promise.which() == 2) {
+        auto &&promise = boost::get<std::promise<std::string>>(last_promise);
+        try {
+            if (parse_success && !response.is_exception) {
+                promise.set_value(boost::get<std::string>(response.return_value.value()));
+            } else if (!parse_success) {
+                throw std::runtime_error(std::string{"Repsonse malformed: "} +
+                                         std::string{begin, end});
+            } else {
+                throw std::runtime_error(boost::get<std::string>(
+                        response.return_value.value_or(
+                                parameter_type{std::string{"Exception returned"}})));
+            }
+        } catch (...) {
+            promise.set_exception(std::current_exception());
+        }
     }
 }
 
@@ -270,8 +370,8 @@ std::future<std::string>
 mkdt::object_remoting_mockup::server_stub::example_method_1(const std::string &input1, unsigned int input2) {
     std::packaged_task<std::string()> task([&]() {
         std::string value{std::to_string(this->example_member_)};
-        value + input1;
-        value + std::to_string(input2);
+        value += input1;
+        value += std::to_string(input2);
 
         if (input2 == 42)
             throw std::runtime_error{"Input2 was equal 42"};
@@ -282,14 +382,14 @@ mkdt::object_remoting_mockup::server_stub::example_method_1(const std::string &i
     return task.get_future();
 }
 
-std::future<void> mkdt::object_remoting_mockup::server_stub::example_method_2(void) noexcept {
+std::future<void> mkdt::object_remoting_mockup::server_stub::example_method_2(void) {
     std::promise<void> promise;
     promise.set_value();
     this->example_member_ += 1;
     return promise.get_future();
 }
 
-std::future<unsigned int> mkdt::object_remoting_mockup::server_stub::example_member() noexcept {
+std::future<unsigned int> mkdt::object_remoting_mockup::server_stub::example_member() {
     std::promise<unsigned> value;
     value.set_value(this->example_member_);
     return value.get_future();
@@ -309,21 +409,39 @@ void mkdt::object_remoting_mockup::server_stub::handle_incoming_data(std::string
     auto end = input.cend();
     auto success = boost::spirit::qi::phrase_parse(begin, end, grammar,
                                                    boost::spirit::standard::space, request);
-
     if (!success)
         throw std::runtime_error(std::string{"Request not readable after"} + std::string{begin, end});
 
+    rpc_response response;
 
-    switch (request.function_to_call) {
+    try {
         using mt = rpc_request::member_function_type;
-        case mt::example_method_1:
-            this->example_method_1(boost::get<std::string>(request.parameters.at(0)),
-                                   boost::get<unsigned>(request.parameters.at(1)));
-            break;
-        default:
-            throw std::logic_error("Default branch in function to call switch");
-            break;
+        if (request.function_to_call == mt::example_method_1) {
+            auto future = this->example_method_1(boost::get<std::string>(request.parameters.at(0)),
+                                                 boost::get<unsigned>(request.parameters.at(1)));
+
+            response.return_value = future.get();
+
+        } else if (request.function_to_call == mt::example_method_2) {
+            this->example_method_2().get();
+        } else if (request.function_to_call == mt::example_member_set) {
+            this->set_example_member(boost::get<unsigned>(request.parameters.at(0))).get();
+        } else if (request.function_to_call == mt::example_member_get) {
+            auto future = this->example_member();
+            response.return_value = future.get();
+        }
+    } catch (const std::exception &e) {
+        response.is_exception = true;
+        response.return_value = e.what();
     }
+
+    std::string output;
+    generate_rpc_response_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, response);
+    if (!success)
+        throw std::runtime_error("Request generation failed");
+
+    this->send_callback_(output);
 }
 
 void mkdt::object_remoting_mockup::server_stub::set_sending_callback(std::function<void(std::string)> send_callback) {
