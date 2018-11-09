@@ -4,84 +4,34 @@
 
 #include <object_remoting_mockup.hpp>
 
-#include <vector>
-#include <cstdint>
+#include <stdexcept>
 
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/karma.hpp>
-#include <boost/variant.hpp>
-#include <boost/optional.hpp>
-
-template<typename Message_Type>
-struct rpc_message_base {
-    static const char *const magic_message_start_text;
-    static const unsigned version_major;
-    static const unsigned version_minor;
-
-    using parameter_type = boost::variant<std::string, unsigned>;
-
-    static const char *const magic_message_end_text;
-};
-
-template<typename Message_Type>
-const char *const rpc_message_base<Message_Type>::magic_message_start_text{u8"mkdt_object_remoting_mockup_protocol"};
-template<typename Message_Type>
-const unsigned rpc_message_base<Message_Type>::version_major{1};
-template<typename Message_Type>
-const unsigned rpc_message_base<Message_Type>::version_minor{0};
-template<typename Message_Type>
-const char *const rpc_message_base<Message_Type>::magic_message_end_text{u8"mkdt_end"};
-
-struct rpc_request : rpc_message_base<rpc_request> {
-    static const char *const magic_rpc_request_phrase;
-    enum struct member_function_type {
-        example_method_1,
-        example_method_2,
-        example_member_get,
-        example_member_set,
-    };
-
-    member_function_type function_to_call;
-    std::vector<parameter_type> parameters;
-};
-
-const char *const rpc_request::magic_rpc_request_phrase{u8"request"};
-
-struct rpc_response : rpc_message_base<rpc_response> {
-    static const char *const magic_rpc_reponse_phrase;
-    using exception_text = std::string;
-    bool is_exception;
-    /*! @brief Holds either the return value to the called function or a parameter for the exception, in both
-     * cases optional
-     *
-     */
-    boost::optional<parameter_type> return_value;
-};
-
-const char *const magic_rpc_reponse_phrase{u8"response"};
-
-using rpc_message = boost::variant<rpc_request, rpc_response>;
 
 BOOST_FUSION_ADAPT_STRUCT(
-        rpc_request,
-        (rpc_request::member_function_type, function_to_call)
-                (std::vector<rpc_request::parameter_type>, parameters)
+        mkdt::object_remoting_mockup::rpc_request,
+        (mkdt::object_remoting_mockup::rpc_request::member_function_type, function_to_call)
+                (std::vector<mkdt::object_remoting_mockup::parameter_type>, parameters)
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
-        rpc_response,
+        mkdt::object_remoting_mockup::rpc_response,
         (bool, is_exception)
-                (boost::optional<rpc_request::parameter_type>, return_value)
+                (boost::optional<mkdt::object_remoting_mockup::parameter_type>, return_value)
 )
+
+namespace mkdt {
+namespace object_remoting_mockup {
 
 namespace ns = ::boost::spirit::standard;
 
-template<typename Iterator, typename Message_Type>
+template<typename Iterator>
 struct common_rules {
     boost::spirit::qi::rule<Iterator, std::string()> quoted_string{
             ::boost::spirit::qi::lexeme['"' >> +(ns::char_ - ('"')) >> '"']};
 
-    boost::spirit::qi::rule<Iterator, typename rpc_message_base<Message_Type>::parameter_type()> parameter_type_{
+    boost::spirit::qi::rule<Iterator, parameter_type()> parameter_type_{
             boost::spirit::qi::uint_ | quoted_string};
 
 };
@@ -89,7 +39,7 @@ struct common_rules {
 template<typename Iterator>
 struct rpc_request_grammar
         : ::boost::spirit::qi::grammar<Iterator, rpc_request()>,
-          common_rules<Iterator, rpc_request> {
+          common_rules<Iterator> {
 
     struct member_function_type_rule
             : boost::spirit::qi::symbols<char, rpc_request::member_function_type> {
@@ -106,19 +56,18 @@ struct rpc_request_grammar
         using namespace ::boost::spirit::qi;
 
 
-        start %= lit(rpc_request::magic_message_start_text) >> omit[+ns::space]
-                                                            >> omit[uint_parser<unsigned, 10, 1>()(
-                                                                    rpc_request::version_major)]
-                                                            >> lit(u8".")
-                                                            >> omit[uint_parser<unsigned, 10, 1>()]
-                                                            >> omit[+ns::space]
-                                                            >> lit(rpc_request::magic_rpc_request_phrase)
-                                                            >> omit[+ns::space]
-                                                            >> member_function_type_
-                                                            >> omit[+ns::space]
-                                                            >> rpc_request_grammar::parameter_type_ % u8","
-                                                            >> omit[*ns::space]
-                                                            >> lit(rpc_request::magic_message_end_text);
+        start %= lit(u8"mkdt_object_remoting_mockup_protocol") >> omit[+ns::space]
+                                                               >> omit[uint_parser<unsigned, 10, 1>()(1)]
+                                                               >> lit(u8".")
+                                                               >> omit[uint_parser<unsigned, 10, 1>()]
+                                                               >> omit[+ns::space]
+                                                               >> lit(u8"request")
+                                                               >> omit[+ns::space]
+                                                               >> member_function_type_
+                                                               >> omit[+ns::space]
+                                                               >> -(common_rules<Iterator>::parameter_type_ % u8",")
+                                                               >> omit[*ns::space]
+                                                               >> lit(u8"mkdt_end");
     }
 
     boost::spirit::qi::rule<Iterator, rpc_request()> start;
@@ -128,26 +77,25 @@ struct rpc_request_grammar
 template<typename Iterator>
 struct rpc_response_grammar
         : ::boost::spirit::qi::grammar<Iterator, rpc_response()>,
-          common_rules<Iterator, rpc_response> {
+          common_rules<Iterator> {
 
     rpc_response_grammar() : rpc_response_grammar::base_type(start) {
 
         using namespace ::boost::spirit::qi;
 
 
-        start %= lit(rpc_response::magic_message_start_text) >> omit[+ns::space]
-                                                             >> omit[uint_parser<unsigned, 10, 1>()(
-                                                                     rpc_response::version_major)]
-                                                             >> lit(u8".")
-                                                             >> omit[uint_parser<unsigned, 10, 1>()]
-                                                             >> omit[+ns::space]
-                                                             >> lit(rpc_response::magic_rpc_reponse_phrase)
-                                                             >> omit[+ns::space]
-                                                             >> bool_
-                                                             >> omit[+ns::space]
-                                                             >> -rpc_response_grammar::parameter_type_
-                                                             >> omit[*ns::space]
-                                                             >> lit(rpc_request::magic_message_end_text);
+        start %= lit(u8"mkdt_object_remoting_mockup_protocol") >> omit[+ns::space]
+                                                               >> omit[uint_parser<unsigned, 10, 1>()(1)]
+                                                               >> lit(u8".")
+                                                               >> omit[uint_parser<unsigned, 10, 1>()]
+                                                               >> omit[+ns::space]
+                                                               >> lit(u8"response")
+                                                               >> omit[+ns::space]
+                                                               >> bool_
+                                                               >> omit[+ns::space]
+                                                               >> -common_rules<Iterator>::parameter_type_
+                                                               >> omit[*ns::space]
+                                                               >> lit(u8"mkdt_end");
     }
 
     boost::spirit::qi::rule<Iterator, rpc_response()> start;
@@ -166,20 +114,20 @@ struct rpc_message_grammar
     rpc_response_grammar<Iterator> response;
 };
 
-template<typename OutputIterator, typename Message_Type>
+template<typename OutputIterator>
 struct common_generators {
     boost::spirit::karma::rule<OutputIterator, std::string()> quoted_string{
             boost::spirit::karma::lit(u8"\"") << boost::spirit::karma::string
                                               << boost::spirit::karma::lit(u8"\"")};
 
-    boost::spirit::karma::rule<OutputIterator, typename rpc_message_base<Message_Type>::parameter_type()> parameter_type_{
+    boost::spirit::karma::rule<OutputIterator, parameter_type()> parameter_type_{
             boost::spirit::karma::uint_ | quoted_string};
 
 };
 
 template<typename OutputIterator>
 struct generate_rpc_request_grammar : boost::spirit::karma::grammar<OutputIterator, rpc_request()>,
-                                      common_generators<OutputIterator, rpc_request> {
+                                      common_generators<OutputIterator> {
     struct member_function_type_gen :
             boost::spirit::karma::symbols<rpc_request::member_function_type, std::string> {
         member_function_type_gen() {
@@ -192,17 +140,18 @@ struct generate_rpc_request_grammar : boost::spirit::karma::grammar<OutputIterat
 
     generate_rpc_request_grammar() : generate_rpc_request_grammar::base_type(start) {
         using namespace boost::spirit::karma;
-        start = lit(rpc_request::magic_message_start_text) << u8" "
-                                                           << omit[uint_(rpc_request::version_major)]
-                                                           << u8"."
-                                                           << omit[uint_(rpc_request::version_minor)]
-                                                           << u8" "
-                                                           << lit(rpc_request::magic_rpc_request_phrase)
-                                                           << u8" "
-                                                           << member_function_type_gen_
-                                                           << u8" "
-                                                           << generate_rpc_request_grammar::parameter_type_ % u8","
-                                                           << lit(rpc_request::magic_message_end_text);
+        start %= lit(u8"mkdt_object_remoting_mockup_protocol") << lit(u8" ")
+                                                               << lit(u8"1")
+                                                               << lit(u8".")
+                                                               << lit(u8"0")
+                                                               << lit(u8" ")
+                                                               << lit(u8"request")
+                                                               << lit(u8" ")
+                                                               << member_function_type_gen_
+                                                               << lit(u8" ")
+                                                               << -(common_generators<OutputIterator>::parameter_type_ %
+                                                                    u8",")
+                                                               << lit(u8"mkdt_end");
 
     }
 
@@ -211,21 +160,21 @@ struct generate_rpc_request_grammar : boost::spirit::karma::grammar<OutputIterat
 
 template<typename OutputIterator>
 struct generate_rpc_response_grammar : boost::spirit::karma::grammar<OutputIterator, rpc_response()>,
-                                       common_generators<OutputIterator, rpc_response> {
+                                       common_generators<OutputIterator> {
 
     generate_rpc_response_grammar() : generate_rpc_response_grammar::base_type(start) {
         using namespace boost::spirit::karma;
-        start = lit(rpc_response::magic_message_start_text) << u8" "
-                                                            << omit[uint_(rpc_response::version_major)]
-                                                            << u8"."
-                                                            << omit[uint_(rpc_response::version_minor)]
-                                                            << u8" "
-                                                            << lit(rpc_response::magic_rpc_reponse_phrase)
-                                                            << u8" "
-                                                            << bool_
-                                                            << u8" "
-                                                            << -generate_rpc_response_grammar::parameter_type_
-                                                            << lit(rpc_response::magic_message_end_text);
+        start = lit(u8"mkdt_object_remoting_mockup_protocol") << lit(u8" ")
+                                                              << lit(u8"1")
+                                                              << lit(u8".")
+                                                              << lit(u8"0")
+                                                              << lit(u8" ")
+                                                              << lit(u8"response")
+                                                              << lit(u8" ")
+                                                              << bool_
+                                                              << lit(u8" ")
+                                                              << -common_generators<OutputIterator>::parameter_type_
+                                                              << lit(u8"mkdt_end");
 
     }
 
@@ -243,6 +192,21 @@ struct generate_rpc_message_grammar : boost::spirit::karma::grammar<OutputIterat
     boost::spirit::karma::rule<OutputIterator, rpc_response()> response;
     boost::spirit::karma::rule<OutputIterator, rpc_request()> request;
 };
+
+
+template
+struct rpc_request_grammar<std::string::const_iterator>;
+template
+struct rpc_response_grammar<std::string::const_iterator>;
+template
+struct generate_rpc_request_grammar<std::back_insert_iterator<std::string>>;
+template
+struct generate_rpc_response_grammar<std::back_insert_iterator<std::string>>;
+
+}
+}
+
+
 
 mkdt::object_remoting_mockup::client_stub::client_stub() {
 
@@ -266,8 +230,32 @@ std::future<void> mkdt::object_remoting_mockup::client_stub::set_example_member(
     return {};
 }
 
-std::string mkdt::object_remoting_mockup::client_stub::handle_incoming_data(std::string input) {
-    return std::string{};
+void mkdt::object_remoting_mockup::client_stub::handle_incoming_data(std::string input) {
+    rpc_response_grammar<std::string::const_iterator> grammar{};
+    rpc_response response;
+    auto begin = input.cbegin();
+    auto end = input.cend();
+    auto parse_success = boost::spirit::qi::phrase_parse(begin, end, grammar,
+                                                         boost::spirit::standard::space, response);
+    auto &&last_promise{this->last_promise_.value()};
+    if (last_promise.which() == 0) {
+        auto &&promise = boost::get<std::promise<void>>(last_promise);
+        try {
+            if (parse_success && !response.is_exception) {
+                promise.set_value();
+            } else if (!parse_success) {
+                throw std::runtime_error(std::string{"Repsonse malformed: "} +
+                                         std::string{begin, end});
+            } else {
+                throw std::runtime_error(boost::get<std::string>(
+                        response.return_value.value_or(
+                                parameter_type{std::string{"Exception returned"}})));
+            }
+        } catch (...) {
+            promise.set_exception(std::current_exception());
+        }
+
+    }
 }
 
 void mkdt::object_remoting_mockup::client_stub::set_sending_callback(std::function<void(std::string)> send_callback) {
@@ -314,7 +302,7 @@ std::future<void> mkdt::object_remoting_mockup::server_stub::set_example_member(
     return return_promise.get_future();
 }
 
-std::string mkdt::object_remoting_mockup::server_stub::handle_incoming_data(std::string input) {
+void mkdt::object_remoting_mockup::server_stub::handle_incoming_data(std::string input) {
     rpc_request_grammar<std::string::const_iterator> grammar{};
     rpc_request request;
     auto begin = input.cbegin();
@@ -325,7 +313,17 @@ std::string mkdt::object_remoting_mockup::server_stub::handle_incoming_data(std:
     if (!success)
         throw std::runtime_error(std::string{"Request not readable after"} + std::string{begin, end});
 
-    return std::string{};
+
+    switch (request.function_to_call) {
+        using mt = rpc_request::member_function_type;
+        case mt::example_method_1:
+            this->example_method_1(boost::get<std::string>(request.parameters.at(0)),
+                                   boost::get<unsigned>(request.parameters.at(1)));
+            break;
+        default:
+            throw std::logic_error("Default branch in function to call switch");
+            break;
+    }
 }
 
 void mkdt::object_remoting_mockup::server_stub::set_sending_callback(std::function<void(std::string)> send_callback) {

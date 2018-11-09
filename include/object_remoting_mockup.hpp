@@ -8,14 +8,18 @@
 #include <string>
 #include <functional>
 #include <future>
+#include <vector>
+#include <cstdint>
 
+#include <boost/variant.hpp>
+#include <boost/optional.hpp>
 
 namespace mkdt {
 namespace object_remoting_mockup {
 
-class interface {
+class example_api {
 public:
-    virtual ~interface() = default;
+    virtual ~example_api() = default;
 
     /*! @brief Adds input2 at the end of input 1 and example_member as prefix and returns that string,
      * but also throws std::exception if input2 == 42
@@ -35,14 +39,41 @@ public:
     virtual std::future<unsigned int> example_member() noexcept = 0;
 
     virtual std::future<void> set_example_member(unsigned value) = 0;
+};
 
-    //Extra interface
-    virtual std::string handle_incoming_data(std::string input) = 0;
-
+class example_api_rpc : public example_api {
+public:
+    virtual void handle_incoming_data(std::string input) = 0;
     virtual void set_sending_callback(std::function<void(std::string)> send_callback) = 0;
 };
 
-class client_stub : public interface {
+using parameter_type = boost::variant<std::string, unsigned>;
+
+struct rpc_request {
+    enum struct member_function_type {
+        example_method_1,
+        example_method_2,
+        example_member_get,
+        example_member_set,
+    };
+
+    member_function_type function_to_call;
+    std::vector<parameter_type> parameters;
+};
+
+struct rpc_response {
+    using exception_text = std::string;
+    bool is_exception;
+    /*! @brief Holds either the return value to the called function or a parameter for the exception, in both
+     * cases optional
+     *
+     */
+    boost::optional<parameter_type> return_value;
+};
+
+using rpc_message = boost::variant<rpc_request, rpc_response>;
+
+class client_stub : public example_api_rpc {
 public:
     client_stub();
 
@@ -54,15 +85,17 @@ public:
 
     std::future<void> set_example_member(unsigned value) override;
 
-    std::string handle_incoming_data(std::string input) override;
+    void handle_incoming_data(std::string input) override;
 
     void set_sending_callback(std::function<void(std::string)> send_callback) override;
 
 private:
     std::function<void(std::string)> send_callback_;
+    boost::optional<boost::variant<std::promise<void>, std::promise<unsigned>>> last_promise_;
+
 };
 
-class server_stub : public interface {
+class server_stub : public example_api_rpc {
 public:
     server_stub();
 
@@ -74,7 +107,7 @@ public:
 
     std::future<void> set_example_member(unsigned value) override;
 
-    std::string handle_incoming_data(std::string input) override;
+    void handle_incoming_data(std::string input) override;
 
     void set_sending_callback(std::function<void(std::string)> send_callback) override;
 
