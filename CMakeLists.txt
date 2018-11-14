@@ -5,8 +5,12 @@ set(CMAKE_CXX_STANDARD 14)
 
 set(TEST_ENABLED TRUE CACHE BOOL "Tests are enabled")
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/vendor")
+
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
+
+find_package(Avahi REQUIRED)
 
 set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/src/registry.cpp
@@ -15,6 +19,8 @@ set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/router.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/object_remoting_mockup.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/object_remoting_mockup.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/swarm_discovery.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/swarm_discovery.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})
@@ -26,6 +32,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<INSTALL_INTERFACE:include>
         )
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} Avahi::client Avahi::compat_libdns_sd)
 
 if (${TEST_ENABLED})
     enable_testing()
