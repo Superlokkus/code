@@ -14,4 +14,8 @@ add_subdirectory(src/object_remoting_mockup)
 add_executable(cli_itermachine_test src/cli_intermachine_test.cpp)
 target_link_libraries(cli_itermachine_test mkdt_lib object_remoting_mockup ${Boost_LIBRARIES})
 
+add_executable(mkdt_example_client src/mkdt_example_client.cpp)
+target_link_libraries(mkdt_example_client mkdt_lib object_remoting_mockup ${Boost_LIBRARIES})
 
+add_executable(mkdt_server src/mkdt_server.cpp)
+target_link_libraries(mkdt_server mkdt_lib object_remoting_mockup ${Boost_LIBRARIES})
