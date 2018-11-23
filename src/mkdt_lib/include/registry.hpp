@@ -71,7 +71,10 @@ public:
     template<typename ConsumeHandler>
     void consume(object_identifier object, ConsumeHandler &&handler);
 
-    void send_object_message_to(const object_identifier &receiver);
+
+    template<typename CompletionHandler>
+    void send_message_to_object(const object_identifier &receiver, const std::string &message,
+                                CompletionHandler &&handler);
 
 private:
     boost::asio::io_context io_context_;
