@@ -19,40 +19,59 @@ using service_identifier = std::string;
 
 using object_identifier = boost::uuids::uuid;
 
-using incoming_callback = std::function<std::string(std::string)>;
-
-using service_factory_callback = std::function<void(object_identifier)>;
-
-class object_socket final {
-    std::future<void> send(std::string message);
-    std::future<void> recieve(incoming_callback incoming_message_callback);
-};
-
-class object_handle final {
-public:
-    object_socket socket;
-
-private:
-    boost::uuids::uuid id;
-    service_identifier service_id;
-};
-
 
 class registry final {
 public:
     registry(boost::asio::io_context &io_context);
 
-    std::future<void> register_stateless_service(service_identifier service_id,
-                                                 incoming_callback);
 
-    std::future<void> register_statefull_service(service_identifier service_id,
-                                                 service_factory_callback factory_callback);
+    /*!
+     * @param service_id
+     * @tparam ServiceEndpointObject Must fullfill for values s of ServiceEndpointObject: s->receive(const std::string& message,
+     * const object_identifier& sender)
+     */
+    template<typename ServiceEndpointObject>
+    void register_stateless_service(service_identifier service_id,
+                                    std::shared_ptr<ServiceEndpointObject> service_object);
 
-    std::future<object_handle> use_service_interface(service_identifier service_id);
+    /*!
+     * @param service_id
+     * @tparam ServiceEndpointFactory Must fullfill for values f of ServiceEndpointFactory:
+     * std::shared_ptr<ServiceEndpointObject> f->create_service_endpoint_object(service_identifier service_id),
+     * s of ServiceEndpointObject: s->receive(const std::string& message, const object_identifier& sender)
+     */
+    template<typename ServiceEndpointFactory>
+    void register_statefull_service(service_identifier service_id,
+                                    std::shared_ptr<ServiceEndpointFactory> factory);
 
-    std::future<object_identifier> expose(service_identifier service_id);
+    /*!
+     *
+     * @tparam IdentifierHandler h of Handler: h(object_identifier)
+     * @param service_id
+     * @param handler
+     */
+    template<typename IdentifierHandler>
+    void use_service_interface(service_identifier service_id, IdentifierHandler &&handler);
 
-    std::future<object_handle> consume(object_identifier object);
+    /*!
+     *
+     * @tparam IdentifierHandler h of Handler: h(object_identifier)
+     * @param service_id
+     * @param handler
+     */
+    template<typename IdentifierHandler>
+    void expose(service_identifier service_id, IdentifierHandler &&handler);
+
+    /*!
+     *
+     * @tparam ConsumeHandler h of ConsumeHandler: h(bool consume_success, object_identifier)
+     * @param object
+     * @param handler
+     */
+    template<typename ConsumeHandler>
+    void consume(object_identifier object, ConsumeHandler &&handler);
+
+    void send_object_message_to(const object_identifier &receiver);
 
 private:
     boost::asio::io_context io_context_;
