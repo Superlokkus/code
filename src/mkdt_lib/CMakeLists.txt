@@ -3,7 +3,7 @@ project(mkdt_lib VERSION 1.0)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/vendor")
 
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS log system thread REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 find_package(Avahi REQUIRED)
@@ -15,6 +15,7 @@ set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/include/router.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/swarm_discovery.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/swarm_discovery.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/mkdt_lib.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})
@@ -25,8 +26,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
         )
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} Avahi::client Avahi::compat_libdns_sd)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE Avahi::client Avahi::compat_libdns_sd)
 
 if (${TEST_ENABLED})
     enable_testing()

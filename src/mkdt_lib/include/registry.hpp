@@ -11,6 +11,7 @@
 #include <functional>
 
 #include <boost/uuid/uuid.hpp>
+#include <boost/asio.hpp>
 
 namespace mkdt {
 
@@ -39,6 +40,7 @@ private:
 
 class registry final {
 public:
+    registry(boost::asio::io_context &io_context);
 
     std::future<void> register_stateless_service(service_identifier service_id,
                                                  incoming_callback);
@@ -52,7 +54,8 @@ public:
 
     std::future<object_handle> consume(object_identifier object);
 
-
+private:
+    boost::asio::io_context io_context_;
 };
 
 
