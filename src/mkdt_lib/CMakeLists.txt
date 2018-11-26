@@ -16,6 +16,7 @@ set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/src/swarm_discovery.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/swarm_discovery.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mkdt_lib.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/common_definitions.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})

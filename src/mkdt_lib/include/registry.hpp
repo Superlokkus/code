@@ -9,39 +9,46 @@
 #include <future>
 #include <memory>
 #include <functional>
+#include <unordered_map>
 
-#include <boost/uuid/uuid.hpp>
 #include <boost/asio.hpp>
 
+#include <common_definitions.hpp>
+
 namespace mkdt {
-
-using service_identifier = std::string;
-
-using object_identifier = boost::uuids::uuid;
 
 
 class registry final {
 public:
     registry(boost::asio::io_context &io_context);
 
-    /*!
-     * @param service_id
-     * @tparam ServiceEndpointObject Must fullfill for values s of ServiceEndpointObject: s->receive(const std::string& message,
-     * const object_identifier& sender)
-     */
-    template<typename ServiceEndpointObject>
-    void register_stateless_service(service_identifier service_id,
-                                    std::shared_ptr<ServiceEndpointObject> service_object);
+    struct object {
+        virtual ~object() = default;
+    };
+
+    struct receiver : object {
+        ~receiver() override = default;
+
+        virtual void receive(const std::string &message, const object_identifier &sender) = 0;
+    };
+
+    struct object_factory : object {
+        ~object_factory() override = default;
+
+        virtual std::shared_ptr<receiver> create_service_endpoint_object(service_identifier service_id) = 0;
+    };
 
     /*!
      * @param service_id
-     * @tparam ServiceEndpointFactory Must fullfill for values f of ServiceEndpointFactory:
-     * std::shared_ptr<ServiceEndpointObject> f->create_service_endpoint_object(service_identifier service_id),
-     * s of ServiceEndpointObject: s->receive(const std::string& message, const object_identifier& sender)
      */
-    template<typename ServiceEndpointFactory>
+    void register_stateless_service(service_identifier service_id,
+                                    std::shared_ptr<receiver> service_object);
+
+    /*!
+     * @param service_id
+     */
     void register_statefull_service(service_identifier service_id,
-                                    std::shared_ptr<ServiceEndpointFactory> factory);
+                                    std::shared_ptr<object_factory> factory);
 
     /*!
      *
@@ -53,14 +60,13 @@ public:
     void use_service_interface(service_identifier service_id, IdentifierHandler &&handler);
 
     /*!
-     * @tparam EndpointObject Must fullfill for values s of EndpointObject: s->receive(const std::string& message,
-     * const object_identifier& sender)
      * @tparam IdentifierHandler h of Handler: h(object_identifier)
      * @param service_id
+     * @param object
      * @param handler
      */
     template<typename EndpointObject, typename IdentifierHandler>
-    void expose(service_identifier service_id, std::shared_ptr<EndpointObject> object, IdentifierHandler &&handler);
+    void expose(service_identifier service_id, std::shared_ptr<receiver> object, IdentifierHandler &&handler);
 
     /*!
      *
@@ -85,25 +91,9 @@ public:
 
 private:
     boost::asio::io_context &io_context_;
+
+    std::unordered_map<object_identifier, std::shared_ptr<object>> object_cache_;
 };
-
-}
-
-
-mkdt::registry::registry(boost::asio::io_context &io_context) :
-        io_context_(io_context) {
-
-}
-
-template<typename ServiceEndpointObject>
-void mkdt::registry::register_stateless_service(mkdt::service_identifier service_id,
-                                                std::shared_ptr<ServiceEndpointObject> service_object) {
-
-}
-
-template<typename ServiceEndpointFactory>
-void mkdt::registry::register_statefull_service(mkdt::service_identifier service_id,
-                                                std::shared_ptr<ServiceEndpointFactory> factory) {
 
 }
 
@@ -113,7 +103,7 @@ void mkdt::registry::use_service_interface(mkdt::service_identifier service_id, 
 }
 
 template<typename EndpointObject, typename IdentifierHandler>
-void mkdt::registry::expose(mkdt::service_identifier service_id, std::shared_ptr<EndpointObject> object,
+void mkdt::registry::expose(mkdt::service_identifier service_id, std::shared_ptr<mkdt::registry::receiver> object,
                             IdentifierHandler &&handler) {
 
 }
@@ -128,5 +118,6 @@ void mkdt::registry::send_message_to_object(const mkdt::object_identifier &recei
                                             CompletionHandler &&handler) {
 
 }
+
 
 #endif //MKDT_REGISTRY_HPP
