@@ -9,10 +9,13 @@
 #include <future>
 #include <memory>
 #include <functional>
+#include <utility>
 #include <unordered_map>
 
 #include <boost/asio.hpp>
+#include <boost/variant.hpp>
 
+#include <router.hpp>
 #include <common_definitions.hpp>
 
 namespace mkdt {
@@ -20,7 +23,12 @@ namespace mkdt {
 
 class registry final {
 public:
-    registry(boost::asio::io_context &io_context);
+    registry(boost::asio::io_context &io_context) :
+            io_context_(io_context),
+            registry_strand_(io_context_),
+            router_(io_context_) {
+
+    }
 
     struct object {
         virtual ~object() = default;
@@ -91,15 +99,18 @@ public:
 
 private:
     boost::asio::io_context &io_context_;
+    boost::asio::io_context::strand registry_strand_;
+    mkdt::router_client router_;
 
-    std::unordered_map<object_identifier, std::shared_ptr<object>> object_cache_;
+    using service_object = boost::variant<std::shared_ptr<receiver>, std::shared_ptr<object_factory>>;
+    std::unordered_map<object_identifier, service_object> services_;
 };
 
 }
 
 template<typename IdentifierHandler>
 void mkdt::registry::use_service_interface(mkdt::service_identifier service_id, IdentifierHandler &&handler) {
-
+    this->router_.use_service_interface(service_id, std::forward(handler));
 }
 
 template<typename EndpointObject, typename IdentifierHandler>

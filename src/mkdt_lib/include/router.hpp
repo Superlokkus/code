@@ -5,30 +5,29 @@
 #ifndef MKDT_INTERFACE_ROUTER_HPP
 #define MKDT_INTERFACE_ROUTER_HPP
 
+#include <unordered_map>
+
+#include <boost/asio.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+
 #include <common_definitions.hpp>
 
 namespace mkdt {
 
 class router_client {
-    /*!
- * @param service_id
- * @tparam ServiceEndpointObject Must fullfill for values s of ServiceEndpointObject: s->receive(const std::string& message,
- * const object_identifier& sender)
- */
-    template<typename ServiceEndpointObject>
-    void register_stateless_service(service_identifier service_id,
-                                    std::shared_ptr<ServiceEndpointObject> service_object);
+public:
+    router_client() = delete;
+
+    router_client(boost::asio::io_context &io_context);
 
     /*!
+     * @tparam IdentifierHandler h of Handler: h(object_identifier)
      * @param service_id
-     * @tparam ServiceEndpointFactory Must fullfill for values f of ServiceEndpointFactory:
-     * std::shared_ptr<ServiceEndpointObject> f->create_service_endpoint_object(service_identifier service_id),
-     * s of ServiceEndpointObject: s->receive(const std::string& message, const object_identifier& sender)
      */
-    template<typename ServiceEndpointFactory>
-    void register_statefull_service(service_identifier service_id,
-                                    std::shared_ptr<ServiceEndpointFactory> factory);
+    template<typename IdentifierHandler>
+    void register_service(service_identifier service_id, IdentifierHandler &&handler);
 
+    void unregister_service(object_identifier object_id);
     /*!
      *
      * @tparam IdentifierHandler h of Handler: h(object_identifier)
@@ -70,12 +69,46 @@ class router_client {
     void send_message_to_object(const object_identifier &receiver, const std::string &message,
                                 CompletionHandler &&handler);
 
+private:
+    boost::asio::io_context &router_io_context_;
+    boost::asio::io_context::strand router_strand_;
+
+    boost::uuids::random_generator uuid_gen_;
+    std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
+
+    template<typename IdentifierHandler>
+    void register_new_service_in_cache(service_identifier service_id, IdentifierHandler &&user_handler);
 };
 
 class router_server {
 
 };
 
+}
+
+mkdt::router_client::router_client(boost::asio::io_context &io_context) :
+        router_io_context_(io_context),
+        router_strand_(router_io_context_) {
+}
+
+template<typename IdentifierHandler>
+void mkdt::router_client::use_service_interface(mkdt::service_identifier service_id, IdentifierHandler &&handler) {
+
+}
+
+template<typename IdentifierHandler>
+void mkdt::router_client::register_service(mkdt::service_identifier service_id, IdentifierHandler &&handler) {
+    this->router_io_context_.post(boost::asio::bind_executor(this->router_strand_, std::bind(
+            &router_client::register_new_service_in_cache, this, service_id, handler
+    )));
+}
+
+template<typename IdentifierHandler>
+void mkdt::router_client::register_new_service_in_cache(mkdt::service_identifier service_id,
+                                                        IdentifierHandler &&user_handler) {
+    auto uuid = this->uuid_gen_();
+    this->object_id_to_service_id_.emplace(uuid, service_id);
+    this->router_io_context_.post(user_handler);
 }
 
 #endif //MKDT_INTERFACE_ROUTER_HPP
