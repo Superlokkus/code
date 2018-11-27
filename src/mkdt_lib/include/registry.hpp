@@ -50,7 +50,9 @@ public:
      * @param service_id
      */
     void register_stateless_service(service_identifier service_id,
-                                    std::shared_ptr<receiver> service_object);
+                                    std::shared_ptr<receiver> service_object) {
+
+    }
 
     /*!
      * @param service_id
@@ -96,6 +98,10 @@ public:
     template<typename CompletionHandler>
     void send_message_to_object(const object_identifier &receiver, const std::string &message,
                                 CompletionHandler &&handler);
+
+    boost::asio::io_context &get_executor() {
+        return this->io_context_;
+    }
 
 private:
     boost::asio::io_context &io_context_;

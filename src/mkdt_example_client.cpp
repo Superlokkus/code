@@ -15,7 +15,7 @@
 #include <boost/log/trivial.hpp>
 
 #include <mkdt_lib.hpp>
-#include <object_remoting_mockup.hpp>
+#include <object_remoting_mockup_adapter.hpp>
 
 
 const char *const menu_text{R"END_MENU_TEXT(
@@ -71,9 +71,11 @@ struct example_client {
     }
 
     void register_service(mkdt::service_identifier name) {
-        //this->registry_.register_stateless_service(name, )
+        BOOST_LOG_TRIVIAL(info) << "Register  service \"" << name << "\"";
+        auto service_object = std::make_shared<mkdt::object_remoting_mockup::
+        stub_adapter<mkdt::object_remoting_mockup::server_stub>>(this->registry_);
+        this->registry_.register_stateless_service(name, service_object);
     }
-
 private:
     boost::asio::io_context io_context_;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;
@@ -98,7 +100,7 @@ int main() {
     example_client client{};
 
     std::cout << menu_text << "Input: ";
-    for (std::string input; std::cin >> input; std::cout << "Input: ") {
+    for (std::string input; std::getline(std::cin, input); std::cout << "Input: ") {
         if (input == "quit")
             break;
         if (input == "disonnect")
@@ -107,7 +109,7 @@ int main() {
             client.disconnect();
             client.connect();
         }
-        std::string input_prefix = "register service";
+        std::string input_prefix = "register service ";
         if (input.find(input_prefix) != std::string::npos) {
             client.register_service(input.substr(input.find(input_prefix) + input_prefix.size()));
         }

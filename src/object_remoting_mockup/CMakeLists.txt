@@ -7,6 +7,7 @@ include_directories(${Boost_INCLUDE_DIR})
 set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/src/object_remoting_mockup.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/object_remoting_mockup.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/object_remoting_mockup_adapter.hpp
         )
 
 add_library(${PROJECT_NAME} ${${PROJECT_NAME}_implementation_files})
@@ -18,7 +19,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         $<INSTALL_INTERFACE:include>
         )
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
-target_link_libraries(${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} mkdt_lib)
 
 if (${TEST_ENABLED})
     enable_testing()
