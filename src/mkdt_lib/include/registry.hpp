@@ -60,12 +60,10 @@ public:
 
     /*!
      *
-     * @tparam IdentifierHandler h of Handler: h(object_identifier)
      * @param service_id
      * @param handler
      */
-    template<typename IdentifierHandler>
-    void use_service_interface(service_identifier service_id, IdentifierHandler &&handler);
+    void use_service_interface(service_identifier service_id, std::function<void(object_identifier)> handler);
 
     /*!
      * @tparam IdentifierHandler h of Handler: h(object_identifier)
@@ -87,15 +85,12 @@ public:
 
 
     /*!
-     *
-     * @tparam CompletionHandler
      * @param receiver
      * @param message
      * @param handler
      */
-    template<typename CompletionHandler>
     void send_message_to_object(const object_identifier &receiver, const std::string &message,
-                                CompletionHandler &&handler);
+                                std::function<void(void)> handler);
 
     boost::asio::io_context &get_executor() {
         return this->io_context_;
@@ -109,28 +104,6 @@ private:
     using service_object = boost::variant<std::shared_ptr<receiver>, std::shared_ptr<object_factory>>;
     std::unordered_map<object_identifier, service_object> services_;
 };
-
-}
-
-template<typename IdentifierHandler>
-void mkdt::registry::use_service_interface(mkdt::service_identifier service_id, IdentifierHandler &&handler) {
-    this->router_.use_service_interface(service_id, std::forward(handler));
-}
-
-template<typename EndpointObject, typename IdentifierHandler>
-void mkdt::registry::expose(mkdt::service_identifier service_id, std::shared_ptr<mkdt::registry::receiver> object,
-                            IdentifierHandler &&handler) {
-
-}
-
-template<typename ConsumeHandler>
-void mkdt::registry::consume(mkdt::object_identifier object, ConsumeHandler &&handler) {
-
-}
-
-template<typename CompletionHandler>
-void mkdt::registry::send_message_to_object(const mkdt::object_identifier &receiver, const std::string &message,
-                                            CompletionHandler &&handler) {
 
 }
 

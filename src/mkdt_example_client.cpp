@@ -76,6 +76,15 @@ struct example_client {
         stub_adapter<mkdt::object_remoting_mockup::server_stub>>(this->registry_);
         this->registry_.register_stateless_service(name, service_object);
     }
+
+    void use_service(mkdt::service_identifier name) {
+        BOOST_LOG_TRIVIAL(info) << "Use  service \"" << name << "\"";
+        this->registry_.use_service_interface(name, [name](auto object_identifier) {
+            BOOST_LOG_TRIVIAL(info) << "Got object identifier \"" << boost::uuids::to_string(object_identifier)
+                                    << "\" for service " << name;
+        });
+    }
+
 private:
     boost::asio::io_context io_context_;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> work_guard_;
@@ -112,6 +121,11 @@ int main() {
         std::string input_prefix = "register service ";
         if (input.find(input_prefix) != std::string::npos) {
             client.register_service(input.substr(input.find(input_prefix) + input_prefix.size()));
+        }
+
+        input_prefix = "use service ";
+        if (input.find(input_prefix) != std::string::npos) {
+            client.use_service(input.substr(input.find(input_prefix) + input_prefix.size()));
         }
     }
 

@@ -32,7 +32,7 @@ private:
     object_identifier last_sender_;
 
     void send_via_registry(std::shared_ptr<std::string> message) {
-        this->registry_.send_message_to_object(last_sender_, *message, [message](auto) {});
+        this->registry_.send_message_to_object(last_sender_, *message, [message]() {});
     }
 };
 

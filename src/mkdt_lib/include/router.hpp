@@ -29,12 +29,10 @@ public:
     void unregister_service(object_identifier object_id);
     /*!
      *
-     * @tparam IdentifierHandler h of Handler: h(object_identifier)
      * @param service_id
      * @param handler
      */
-    template<typename IdentifierHandler>
-    void use_service_interface(service_identifier service_id, IdentifierHandler &&handler);
+    void use_service_interface(service_identifier service_id, std::function<void(object_identifier)> handler);
 
     /*!
      * @tparam EndpointObject Must fullfill for values s of EndpointObject: s->receive(const std::string& message,
@@ -75,8 +73,11 @@ private:
     boost::uuids::random_generator uuid_gen_;
     std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
 
-    void
-    register_new_service_in_cache(service_identifier service_id, std::function<void(object_identifier)> user_handler);
+    void register_new_service_in_cache(service_identifier service_id,
+                                       std::function<void(object_identifier)> user_handler);
+
+    void service_lookup(service_identifier service_id,
+                        std::function<void(object_identifier)> user_handler);
 };
 
 class router_server {

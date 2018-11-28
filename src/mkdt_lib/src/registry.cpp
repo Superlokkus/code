@@ -13,3 +13,13 @@ void mkdt::registry::register_stateless_service(mkdt::service_identifier service
                                                                           }));
 }
 
+void mkdt::registry::send_message_to_object(const mkdt::object_identifier &receiver, const std::string &message,
+                                            std::function<void(void)> handler) {
+
+}
+
+void mkdt::registry::use_service_interface(mkdt::service_identifier service_id,
+                                           std::function<void(object_identifier)> handler) {
+    this->router_.use_service_interface(service_id, std::move(handler));
+}
+
