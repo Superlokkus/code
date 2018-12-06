@@ -50,7 +50,8 @@ public:
      * @param service_id
      */
     void register_stateless_service(service_identifier service_id,
-                                    std::shared_ptr<receiver> service_object);
+                                    std::shared_ptr<receiver> service_object,
+                                    std::function<void(void)> completion_handler = []() {});
 
     /*!
      * @param service_id
@@ -75,13 +76,11 @@ public:
     void expose(service_identifier service_id, std::shared_ptr<receiver> object, IdentifierHandler &&handler);
 
     /*!
-     *
-     * @tparam ConsumeHandler h of ConsumeHandler: h(bool consume_success, object_identifier)
-     * @param object
-     * @param handler
-     */
-    template<typename ConsumeHandler>
-    void consume(object_identifier object, ConsumeHandler &&handler);
+    *
+    * @param object
+    * @param handler
+    */
+    void consume(object_identifier object, std::function<void(bool, object_identifier)> handler);
 
 
     /*!
@@ -102,7 +101,7 @@ private:
     mkdt::router_client router_;
 
     using service_object = boost::variant<std::shared_ptr<receiver>, std::shared_ptr<object_factory>>;
-    std::unordered_map<object_identifier, service_object> services_;
+    std::unordered_map<service_identifier, service_object> services_;
 };
 
 }

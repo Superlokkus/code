@@ -24,7 +24,7 @@ public:
     /*!
      * @param service_id
      */
-    void register_service(service_identifier service_id, std::function<void(object_identifier)> handler);
+    void register_service(service_identifier service_id, std::function<void(void)> handler);
 
     void unregister_service(object_identifier object_id);
     /*!
@@ -47,12 +47,10 @@ public:
 
     /*!
      *
-     * @tparam ConsumeHandler h of ConsumeHandler: h(bool consume_success, object_identifier)
      * @param object
      * @param handler
      */
-    template<typename ConsumeHandler>
-    void consume(object_identifier object, ConsumeHandler &&handler);
+    void consume(object_identifier object, std::function<void(bool, object_identifier)> handler);
 
 
     /*!
@@ -74,13 +72,21 @@ private:
     std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
 
     void register_new_service_in_cache(service_identifier service_id,
-                                       std::function<void(object_identifier)> user_handler);
+                                       std::function<void(void)> user_handler);
 
     void service_lookup(service_identifier service_id,
                         std::function<void(object_identifier)> user_handler);
 };
 
 class router_server {
+public:
+    router_server() = default;
+
+    router_server(boost::asio::io_context &io_context);
+
+    router_server(const router_server &) = delete;
+
+    router_server &operator=(const router_server &) = delete;
 
 };
 

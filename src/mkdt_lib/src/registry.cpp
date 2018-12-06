@@ -5,12 +5,14 @@
 #include <registry.hpp>
 
 void mkdt::registry::register_stateless_service(mkdt::service_identifier service_id,
-                                                std::shared_ptr<mkdt::registry::receiver> service_object) {
-    this->router_.register_service(service_id, boost::asio::bind_executor(this->registry_strand_,
-                                                                          [this, service_object](auto object_id) {
-                                                                              this->services_.emplace(object_id,
-                                                                                                      service_object);
-                                                                          }));
+                                                std::shared_ptr<mkdt::registry::receiver> service_object,
+                                                std::function<void(void)> completion_handler) {
+    this->router_.register_service(service_id, std::move(completion_handler));
+    boost::asio::post(this->io_context_, boost::asio::bind_executor(this->registry_strand_,
+                                                                    [=]() {
+                                                                        this->services_.emplace(service_id,
+                                                                                                service_object);
+                                                                    }));
 }
 
 void mkdt::registry::send_message_to_object(const mkdt::object_identifier &receiver, const std::string &message,
