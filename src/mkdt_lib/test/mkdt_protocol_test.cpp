@@ -7,6 +7,7 @@
 struct local_request_phrases_fixture {
     std::string expose_object_request{"mkdt/1  local_request  \t expose_object_message: \"Fo bar\t \\\"8\","
                                       "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4  mkdt_local_message_end\r\n"};
+    std::string register_service_request{"mkdt/1 register_service_message: \"FooBar\" mkdt_local_message_end\r\n"};
 
     std::vector<std::string> invalid_stuff{
             {"RTSP/1.0\t200 \t  OK\r\n"},
@@ -31,8 +32,7 @@ struct local_request_phrases_fixture {
         mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
         begin = phrase.cbegin();
         end = phrase.cend();
-        success = boost::spirit::qi::phrase_parse(begin, end, grammar,
-                                                  boost::spirit::ascii::space, message);
+        success = boost::spirit::qi::parse(begin, end, grammar, message);
     }
 };
 
@@ -42,6 +42,8 @@ BOOST_AUTO_TEST_CASE(expose_object_request_test) {
     parse_phrase(expose_object_request);
     BOOST_CHECK(success);
     BOOST_CHECK(begin == end);
+    std::string parse_remainder{begin, end};
+    BOOST_TEST_MESSAGE(parse_remainder);
     BOOST_REQUIRE_EQUAL(message.which(), 3);
     const auto &expose_request = boost::get<mkdt::protocol::expose_object_message>(message);
     BOOST_CHECK_EQUAL(expose_request.service_name, "Fo bar\t \"8");
@@ -49,6 +51,25 @@ BOOST_AUTO_TEST_CASE(expose_object_request_test) {
                                            0xd4, 0x64, 0xb4};
     BOOST_TEST(expose_request.object == raw_uuid,
                boost::test_tools::per_element());
+}
+
+BOOST_AUTO_TEST_CASE(register_service_request_test) {
+    parse_phrase(register_service_request);
+    BOOST_CHECK(success);
+    BOOST_CHECK(begin == end);
+    std::string parse_remainder{begin, end};
+    BOOST_TEST_MESSAGE(parse_remainder);
+    BOOST_REQUIRE_EQUAL(message.which(), 0);
+    const auto &service_request = boost::get<mkdt::protocol::register_service_message>(message);
+    BOOST_CHECK_EQUAL(service_request.service_name, "FooBar");
+}
+
+BOOST_AUTO_TEST_CASE(invalid_stuff_test) {
+    for (const auto &phrase : invalid_stuff) {
+        BOOST_TEST_MESSAGE(phrase);
+        parse_phrase(phrase);
+        BOOST_CHECK(!success);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

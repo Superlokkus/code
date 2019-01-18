@@ -90,7 +90,8 @@ struct common_rules {
             ::boost::spirit::qi::lexeme['"' >> +(ns::char_ - (ctl | '"')) >> '"']};
 
     boost::spirit::qi::rule<Iterator, register_service_message()>
-            register_service_message_{quoted_string};
+            register_service_message_{boost::spirit::qi::lit("register_service_message:")
+                                              >> boost::spirit::qi::omit[+ns::space] >> quoted_string};
 
     boost::spirit::qi::rule<Iterator, expose_object_message()>
             expose_object_message_{boost::spirit::qi::lit("expose_object_message:")
