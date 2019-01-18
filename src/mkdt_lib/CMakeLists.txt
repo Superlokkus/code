@@ -36,6 +36,7 @@ if (${TEST_ENABLED})
     enable_testing()
     set(${PROJECT_NAME}_test_src
             ${CMAKE_CURRENT_SOURCE_DIR}/test/registry_test.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/mkdt_protocol_test.cpp
             )
     foreach (testSrc ${${PROJECT_NAME}_test_src})
         get_filename_component(testName ${testSrc} NAME_WE)
