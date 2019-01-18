@@ -4,6 +4,7 @@
 
 #include <router.hpp>
 
+#include <mkdt_protocol.hpp>
 
 mkdt::router_client::router_client(boost::asio::io_context &io_context) :
         router_io_context_(io_context),

@@ -23,7 +23,7 @@ struct stub_adapter : StubT, registry::receiver {
         });
     }
 
-    void receive(const std::string &message, const object_identifier &sender) override {
+    void receive(const std::string &message, boost::optional<object_identifier> sender) override {
         this->handle_incoming_data(message);
     }
 

@@ -14,6 +14,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/variant.hpp>
+#include <boost/optional.hpp>
 
 #include <router.hpp>
 #include <common_definitions.hpp>
@@ -37,14 +38,9 @@ public:
     struct receiver : object {
         ~receiver() override = default;
 
-        virtual void receive(const std::string &message, const object_identifier &sender) = 0;
+        virtual void receive(const std::string &message, boost::optional<object_identifier> sender) = 0;
     };
 
-    struct object_factory : object {
-        ~object_factory() override = default;
-
-        virtual std::shared_ptr<receiver> create_service_endpoint_object(service_identifier service_id) = 0;
-    };
 
     /*!
      * @param service_id
@@ -52,12 +48,6 @@ public:
     void register_stateless_service(service_identifier service_id,
                                     std::shared_ptr<receiver> service_object,
                                     std::function<void(void)> completion_handler = []() {});
-
-    /*!
-     * @param service_id
-     */
-    void register_statefull_service(service_identifier service_id,
-                                    std::shared_ptr<object_factory> factory);
 
     /*!
      *
@@ -100,7 +90,7 @@ private:
     boost::asio::io_context::strand registry_strand_;
     mkdt::router_client router_;
 
-    using service_object = boost::variant<std::shared_ptr<receiver>, std::shared_ptr<object_factory>>;
+    using service_object = std::shared_ptr<receiver>;
     std::unordered_map<service_identifier, service_object> services_;
 };
 
