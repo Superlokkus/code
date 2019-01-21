@@ -7,7 +7,8 @@
 struct local_request_phrases_fixture {
     std::string expose_object_request{"mkdt/1  local_request  \t expose_object_message: \"Fo bar\t \\\"8\","
                                       "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4  mkdt_local_message_end\r\n"};
-    std::string register_service_request{"mkdt/1 register_service_message: \"FooBar\" mkdt_local_message_end\r\n"};
+    std::string register_service_request{
+            "mkdt/1 local_request register_service_message: \"FooBar\" mkdt_local_message_end\r\n"};
 
     std::string register_service_text{"register_service_message: \"FooBar\""};
     std::string expose_object_text{"expose_object_message: \"Fo bar\t \\\"8\","
