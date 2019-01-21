@@ -9,6 +9,8 @@ struct local_request_phrases_fixture {
                                       "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4  mkdt_local_message_end\r\n"};
     std::string register_service_request{"mkdt/1 register_service_message: \"FooBar\" mkdt_local_message_end\r\n"};
 
+    std::string register_service_text{"register_service_message: \"FooBar\""};
+
     std::vector<std::string> invalid_stuff{
             {"RTSP/1.0\t200 \t  OK\r\n"},
             {"oijsdisdjlisdfjlrur93209p831§\"§=)§"},
@@ -26,24 +28,34 @@ struct local_request_phrases_fixture {
     std::string::const_iterator begin{};
     std::string::const_iterator end{};
     bool success{false};
-    mkdt::protocol::local_request message{};
 
-    void parse_phrase(const std::string &phrase) {
-        mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
+    template<typename GrammarT, typename AttributeT>
+    void parse_phrase(const std::string &phrase, GrammarT &grammar, AttributeT &attribute) {
         begin = phrase.cbegin();
         end = phrase.cend();
-        success = boost::spirit::qi::parse(begin, end, grammar, message);
+        success = boost::spirit::qi::parse(begin, end, grammar, attribute);
+
+        BOOST_CHECK(success);
+        BOOST_CHECK(begin == end);
+        std::string parse_remainder{begin, end};
+        BOOST_TEST_MESSAGE(parse_remainder);
     }
 };
 
 BOOST_FIXTURE_TEST_SUITE(local_request_phrases_tests, local_request_phrases_fixture)
 
+BOOST_AUTO_TEST_CASE(register_service_rule_test) {
+    mkdt::protocol::common_rules<std::string::const_iterator> rules{};
+    mkdt::protocol::register_service_message message{};
+    parse_phrase(register_service_text, rules.register_service_message_, message);
+    BOOST_CHECK_EQUAL(message.service_name, "FooBar");
+};
+
 BOOST_AUTO_TEST_CASE(expose_object_request_test) {
-    parse_phrase(expose_object_request);
-    BOOST_CHECK(success);
-    BOOST_CHECK(begin == end);
-    std::string parse_remainder{begin, end};
-    BOOST_TEST_MESSAGE(parse_remainder);
+    mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_request message{};
+    parse_phrase(expose_object_request, grammar, message);
+
     BOOST_REQUIRE_EQUAL(message.which(), 3);
     const auto &expose_request = boost::get<mkdt::protocol::expose_object_message>(message);
     BOOST_CHECK_EQUAL(expose_request.service_name, "Fo bar\t \"8");
@@ -54,22 +66,14 @@ BOOST_AUTO_TEST_CASE(expose_object_request_test) {
 }
 
 BOOST_AUTO_TEST_CASE(register_service_request_test) {
-    parse_phrase(register_service_request);
-    BOOST_CHECK(success);
-    BOOST_CHECK(begin == end);
-    std::string parse_remainder{begin, end};
-    BOOST_TEST_MESSAGE(parse_remainder);
+    mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_request message{};
+    parse_phrase(register_service_request, grammar, message);
+
     BOOST_REQUIRE_EQUAL(message.which(), 0);
     const auto &service_request = boost::get<mkdt::protocol::register_service_message>(message);
     BOOST_CHECK_EQUAL(service_request.service_name, "FooBar");
 }
 
-BOOST_AUTO_TEST_CASE(invalid_stuff_test) {
-    for (const auto &phrase : invalid_stuff) {
-        BOOST_TEST_MESSAGE(phrase);
-        parse_phrase(phrase);
-        BOOST_CHECK(!success);
-    }
-}
 
 BOOST_AUTO_TEST_SUITE_END()
