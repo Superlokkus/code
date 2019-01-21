@@ -10,6 +10,8 @@ struct local_request_phrases_fixture {
     std::string register_service_request{"mkdt/1 register_service_message: \"FooBar\" mkdt_local_message_end\r\n"};
 
     std::string register_service_text{"register_service_message: \"FooBar\""};
+    std::string expose_object_text{"expose_object_message: \"Fo bar\t \\\"8\","
+                                   "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4"};
 
     std::vector<std::string> invalid_stuff{
             {"RTSP/1.0\t200 \t  OK\r\n"},
@@ -51,6 +53,17 @@ BOOST_AUTO_TEST_CASE(register_service_rule_test) {
     BOOST_CHECK_EQUAL(message.service_name, "FooBar");
 };
 
+BOOST_AUTO_TEST_CASE(expose_object_rule_test) {
+    mkdt::protocol::common_rules<std::string::const_iterator> rules{};
+    mkdt::protocol::expose_object_message expose_request{};
+    parse_phrase(expose_object_text, rules.expose_object_message_, expose_request);
+    BOOST_CHECK_EQUAL(expose_request.service_name, "Fo bar\t \\\"8");
+    const std::array<uint8_t, 16> raw_uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
+                                           0xd4, 0x64, 0xb4};
+    BOOST_TEST(expose_request.object == raw_uuid,
+               boost::test_tools::per_element());
+};
+
 BOOST_AUTO_TEST_CASE(expose_object_request_test) {
     mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
     mkdt::protocol::local_request message{};
@@ -58,7 +71,7 @@ BOOST_AUTO_TEST_CASE(expose_object_request_test) {
 
     BOOST_REQUIRE_EQUAL(message.which(), 3);
     const auto &expose_request = boost::get<mkdt::protocol::expose_object_message>(message);
-    BOOST_CHECK_EQUAL(expose_request.service_name, "Fo bar\t \"8");
+    BOOST_CHECK_EQUAL(expose_request.service_name, "Fo bar\t \\\"8");
     const std::array<uint8_t, 16> raw_uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
                                            0xd4, 0x64, 0xb4};
     BOOST_TEST(expose_request.object == raw_uuid,

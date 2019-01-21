@@ -108,7 +108,9 @@ struct common_rules {
             ctl{ns::cntrl};
 
     boost::spirit::qi::rule<Iterator, mkdt::protocol::string()> quoted_string{
-            ::boost::spirit::qi::lexeme['"' >> +(ns::char_ - (ctl | '"')) >> '"']};
+            ::boost::spirit::qi::lexeme['"'
+                    >> +(boost::spirit::qi::as<mkdt::protocol::string>()[(ns::char_ - '"' - '\\')]
+                         | ns::string("\\\"")) >> '"']};
 
     boost::spirit::qi::rule<Iterator, register_service_message()>
             register_service_message_{boost::spirit::qi::as<mkdt::protocol::string>()[
