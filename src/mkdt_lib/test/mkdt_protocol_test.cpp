@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(register_service_request_test) {
 
 BOOST_AUTO_TEST_SUITE_END()
 
-BOOST_AUTO_TEST_CASE(transport_spec_gen_test) {
+BOOST_AUTO_TEST_CASE(use_service_request_gen_test) {
     mkdt::protocol::local_request request{mkdt::protocol::use_service_request{{}, "My Foobar Service"}};
     std::string output;
     mkdt::protocol::generate_local_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
@@ -158,6 +158,44 @@ BOOST_AUTO_TEST_CASE(transport_spec_gen_test) {
     BOOST_CHECK(success);
     BOOST_CHECK_EQUAL(output,
                       "mkdt/1 local_request use_service_request: \"My Foobar Service\" mkdt_local_message_end\r\n");
+}
+
+BOOST_AUTO_TEST_CASE(message_for_object_gen_test) {
+    mkdt::protocol::local_request request{mkdt::protocol::message_for_object{
+            "My Service Name",
+            boost::uuids::uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
+                               0xd4, 0x64, 0xbb},
+            "Thats my 42 message",
+            boost::uuids::uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
+                               0xd4, 0x64, 0xaf}
+    }};
+    std::string output;
+    mkdt::protocol::generate_local_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    BOOST_CHECK(success);
+    BOOST_CHECK_EQUAL(output,
+                      "mkdt/1 local_request message_for_object: \"My Service Name\""
+                      ",2bc69ead-4aba-4a39-92c0-9565f4d464bb,\"Thats my 42 message\""
+                      ",2bc69ead-4aba-4a39-92c0-9565f4d464af"
+                      " mkdt_local_message_end\r\n");
+}
+
+BOOST_AUTO_TEST_CASE(message_for_object_without_sender_gen_test) {
+    mkdt::protocol::local_request request{mkdt::protocol::message_for_object{
+            "My Service Name",
+            boost::uuids::uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
+                               0xd4, 0x64, 0xbb},
+            "Thats my 42 message",
+            {}
+    }};
+    std::string output;
+    mkdt::protocol::generate_local_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    BOOST_CHECK(success);
+    BOOST_CHECK_EQUAL(output,
+                      "mkdt/1 local_request message_for_object: \"My Service Name\""
+                      ",2bc69ead-4aba-4a39-92c0-9565f4d464bb,\"Thats my 42 message\""
+                      " mkdt_local_message_end\r\n");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

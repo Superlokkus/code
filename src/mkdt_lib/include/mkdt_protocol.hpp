@@ -186,12 +186,25 @@ struct local_request_grammar
 
 template<typename OutputIterator>
 struct common_generators {
+    boost::spirit::karma::rule<OutputIterator, boost::uuids::uuid()>
+            uuid_{
+            boost::spirit::karma::stream
+    };
+
     boost::spirit::karma::rule<OutputIterator, register_service_message()>
             register_service_message_{boost::spirit::skip[boost::spirit::karma::string] <<
                                                                                         boost::spirit::karma::lit(
                                                                                                 "register_service_message: \"")
                                                                                         << boost::spirit::karma::string
                                                                                         << "\""
+    };
+
+    boost::spirit::karma::rule<OutputIterator, unregister_service_message()>
+            unregister_service_message_{boost::spirit::skip[boost::spirit::karma::string] <<
+                                                                                          boost::spirit::karma::lit(
+                                                                                                  "unregister_service_message: \"")
+                                                                                          << boost::spirit::karma::string
+                                                                                          << "\""
     };
 
     boost::spirit::karma::rule<OutputIterator, use_service_request()>
@@ -202,6 +215,29 @@ struct common_generators {
                                                                                    << "\""
     };
 
+    boost::spirit::karma::rule<OutputIterator, expose_object_message()>
+            expose_object_message_{
+            boost::spirit::karma::lit("expose_object_message: \"")
+                    << boost::spirit::karma::string
+                    << "\"," << uuid_
+    };
+
+    boost::spirit::karma::rule<OutputIterator, consume_object_request()>
+            consume_object_request_{
+            boost::spirit::karma::lit("consume_object_request: \"")
+                    << boost::spirit::karma::string
+                    << "\"," << uuid_
+    };
+
+    boost::spirit::karma::rule<OutputIterator, message_for_object()>
+            message_for_object_{
+            boost::spirit::karma::lit("message_for_object: \"") << boost::spirit::karma::string
+                                                                << boost::spirit::karma::lit("\",") << uuid_
+                                                                << boost::spirit::karma::lit(",\"")
+                                                                << boost::spirit::karma::string
+                                                                << boost::spirit::karma::lit("\"")
+                                                                << -("," << uuid_)
+    };
 
 };
 
@@ -211,10 +247,14 @@ struct generate_local_request_grammar : boost::spirit::karma::grammar<OutputIter
     generate_local_request_grammar() : generate_local_request_grammar::base_type(start) {
         namespace karma = boost::spirit::karma;
         start = karma::lit("mkdt/") << major_version_
-                                    << karma::lit(" local_request ") <<
-                                    (common_generators<OutputIterator>::register_service_message_ |
-                                     common_generators<OutputIterator>::use_service_request_)
-                                    << karma::lit(" mkdt_local_message_end\r\n");
+                                    << karma::lit(" local_request ") << (
+                                            common_generators<OutputIterator>::register_service_message_
+                                            | common_generators<OutputIterator>::unregister_service_message_
+                                            | common_generators<OutputIterator>::use_service_request_
+                                            | common_generators<OutputIterator>::expose_object_message_
+                                            | common_generators<OutputIterator>::consume_object_request_
+                                            | common_generators<OutputIterator>::message_for_object_
+                                    ) << karma::lit(" mkdt_local_message_end\r\n");
 
     }
 
