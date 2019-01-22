@@ -43,18 +43,19 @@ struct use_service_request {
 
 struct expose_object_message {
     service_identifier service_name;
-    object_identifier object;
+    object_identifier object{};
 };//ok
 
 struct consume_object_request {
     service_identifier service_name;
-    object_identifier object;
+    object_identifier object{};
 };//youwon/nope
 
 struct message_for_object {
     service_identifier service_name;
-    object_identifier object;
-    std::vector<uint8_t> message;
+    object_identifier receiver{};
+    string message;
+    boost::optional<object_identifier> sender;
 }; //Not a host for this service, or ok
 
 using local_request = boost::variant<
@@ -98,8 +99,9 @@ BOOST_FUSION_ADAPT_STRUCT(
 BOOST_FUSION_ADAPT_STRUCT(
         mkdt::protocol::message_for_object,
         (mkdt::service_identifier, service_name)
-                (mkdt::object_identifier, object)
-                (std::vector<uint8_t>, message)
+                (mkdt::object_identifier, receiver)
+                (mkdt::protocol::string, message)
+                (boost::optional<mkdt::object_identifier>, sender)
 )
 
 namespace mkdt {
@@ -113,9 +115,6 @@ struct common_rules {
             uuid_{(boost::spirit::qi::lit("{") >> uuid_internal_ >> boost::spirit::qi::lit("}")) |
                   uuid_internal_};
 
-    boost::spirit::qi::rule<Iterator, mkdt::protocol::string()>
-            ctl{ns::cntrl};
-
     boost::spirit::qi::rule<Iterator, mkdt::protocol::string()> quoted_string{
             ::boost::spirit::qi::lexeme['"'
                     >> +(boost::spirit::qi::as<mkdt::protocol::string>()[(ns::char_ - '"' - '\\')]
@@ -126,11 +125,39 @@ struct common_rules {
                                               >> boost::spirit::qi::omit[+ns::space] >> quoted_string
     };
 
+    boost::spirit::qi::rule<Iterator, unregister_service_message()>
+            unregister_service_message_{ns::string("unregister_service_message:")
+                                                >> boost::spirit::qi::omit[+ns::space] >> quoted_string
+    };
+
+    boost::spirit::qi::rule<Iterator, use_service_request()>
+            use_service_request_{ns::string("use_service_request:")
+                                         >> boost::spirit::qi::omit[+ns::space] >> quoted_string
+    };
+
     boost::spirit::qi::rule<Iterator, expose_object_message()>
             expose_object_message_{boost::spirit::qi::lit("expose_object_message:")
                                            >> boost::spirit::qi::omit[+ns::space] >> quoted_string
                                            >> boost::spirit::qi::lit(",")
                                            >> uuid_};
+
+    boost::spirit::qi::rule<Iterator, consume_object_request()>
+            consume_object_request_{boost::spirit::qi::lit("consume_object_request:")
+                                            >> boost::spirit::qi::omit[+ns::space] >> quoted_string
+                                            >> boost::spirit::qi::lit(",")
+                                            >> uuid_};
+
+    boost::spirit::qi::rule<Iterator, message_for_object()>
+            message_for_object_{boost::spirit::qi::lit("message_for_object:") >> boost::spirit::qi::omit[+ns::space]
+                                                                              >> quoted_string
+                                                                              >> boost::spirit::qi::lit(",")
+                                                                              >> uuid_
+                                                                              >> boost::spirit::qi::lit(",")
+                                                                              >> quoted_string
+                                                                              >> -(boost::spirit::qi::lit(",")
+                                                                                      >> uuid_)};
+
+
 };
 
 
@@ -144,7 +171,12 @@ struct local_request_grammar
         start %= qi::lit("mkdt/") >> qi::omit[qi::uint_(major_version)]
                                   >> qi::omit[+ns::space] >> qi::lit("local_request") >> qi::omit[+ns::space]
                                   >> (common_rules<Iterator>::register_service_message_ |
-                                      common_rules<Iterator>::expose_object_message_)
+                                      common_rules<Iterator>::unregister_service_message_ |
+                                      common_rules<Iterator>::use_service_request_ |
+                                      common_rules<Iterator>::expose_object_message_ |
+                                      common_rules<Iterator>::consume_object_request_ |
+                                      common_rules<Iterator>::message_for_object_
+                                  )
                                   >> qi::omit[+ns::space] >> qi::lit("mkdt_local_message_end\r\n");
     }
 
