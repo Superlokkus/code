@@ -9,16 +9,20 @@
 
 namespace mkdt {
 
-class router_server {
+class router_server final {
 public:
-    router_server() = default;
+    router_server() = delete;
 
     router_server(boost::asio::io_context &io_context);
 
-    router_server(const router_server &) = delete;
+    ~router_server();
 
+    router_server(const router_server &) = delete;
     router_server &operator=(const router_server &) = delete;
 
+private:
+    boost::asio::ip::tcp::acceptor tcp_v4_;
+    boost::asio::ip::tcp::acceptor tcp_v6_;
 };
 
 }
