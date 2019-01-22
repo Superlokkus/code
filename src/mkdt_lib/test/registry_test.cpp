@@ -2,7 +2,7 @@
 
 #include <boost/test/included/unit_test.hpp>
 
-#include <router.hpp>
+#include <router_client.hpp>
 #include <registry.hpp>
 
 BOOST_AUTO_TEST_SUITE(registry_tests)

@@ -16,7 +16,7 @@
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
 
-#include <router.hpp>
+#include <router_client.hpp>
 #include <common_definitions.hpp>
 
 namespace mkdt {
@@ -45,9 +45,9 @@ public:
     /*!
      * @param service_id
      */
-    void register_stateless_service(service_identifier service_id,
-                                    std::shared_ptr<receiver> service_object,
-                                    std::function<void(void)> completion_handler = []() {});
+    void register_service(service_identifier service_id,
+                          std::shared_ptr<receiver> service_object,
+                          std::function<void(void)> completion_handler = []() {});
 
     /*!
      *

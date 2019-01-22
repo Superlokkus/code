@@ -11,8 +11,10 @@ find_package(Avahi REQUIRED)
 set(${PROJECT_NAME}_implementation_files
         ${CMAKE_CURRENT_SOURCE_DIR}/src/registry.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/registry.hpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/router.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/router.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/router_client.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/router_client.hpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/router_server.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/router_server.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/swarm_discovery.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/swarm_discovery.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/include/mkdt_lib.hpp

@@ -7,6 +7,6 @@
 
 #include <common_definitions.hpp>
 #include <registry.hpp>
-#include <router.hpp>
+#include <router_client.hpp>
 
 #endif //MKDT_MKDT_LIB_HPP

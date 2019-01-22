@@ -74,7 +74,7 @@ struct example_client {
         BOOST_LOG_TRIVIAL(info) << "Register  service \"" << name << "\"";
         auto service_object = std::make_shared<mkdt::object_remoting_mockup::
         stub_adapter<mkdt::object_remoting_mockup::server_stub>>(this->registry_);
-        this->registry_.register_stateless_service(name, service_object);
+        this->registry_.register_service(name, service_object);
     }
 
     void use_service(mkdt::service_identifier name) {

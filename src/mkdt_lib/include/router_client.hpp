@@ -1,4 +1,4 @@
-/*! @file router.hpp
+/*! @file router_client.hpp
  *
  */
 
@@ -77,20 +77,6 @@ private:
     void service_lookup(service_identifier service_id,
                         std::function<void(object_identifier)> user_handler);
 };
-
-class router_server {
-public:
-    router_server() = default;
-
-    router_server(boost::asio::io_context &io_context);
-
-    router_server(const router_server &) = delete;
-
-    router_server &operator=(const router_server &) = delete;
-
-};
-
 }
-
 
 #endif //MKDT_INTERFACE_ROUTER_HPP
