@@ -4,6 +4,8 @@
 
 #include <mkdt_protocol.hpp>
 
+BOOST_AUTO_TEST_SUITE(mkdt_protocol_test)
+
 struct local_request_phrases_fixture {
     std::string expose_object_request{"mkdt/1  local_request  \t expose_object_message: \"Fo bar\t \\\"8\","
                                       "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4  mkdt_local_message_end\r\n"};
@@ -146,5 +148,16 @@ BOOST_AUTO_TEST_CASE(register_service_request_test) {
 
 }
 
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_CASE(transport_spec_gen_test) {
+    mkdt::protocol::local_request request{mkdt::protocol::use_service_request{{}, "My Foobar Service"}};
+    std::string output;
+    mkdt::protocol::generate_local_request_grammar<std::back_insert_iterator<std::string>> gen_grammar{};
+    const bool success = boost::spirit::karma::generate(std::back_inserter(output), gen_grammar, request);
+    BOOST_CHECK(success);
+    BOOST_CHECK_EQUAL(output,
+                      "mkdt/1 local_request use_service_request: \"My Foobar Service\" mkdt_local_message_end\r\n");
+}
 
 BOOST_AUTO_TEST_SUITE_END()

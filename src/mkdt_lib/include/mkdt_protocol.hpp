@@ -183,6 +183,47 @@ struct local_request_grammar
     boost::spirit::qi::rule<Iterator, local_request()> start;
 
 };
+
+template<typename OutputIterator>
+struct common_generators {
+    boost::spirit::karma::rule<OutputIterator, register_service_message()>
+            register_service_message_{boost::spirit::skip[boost::spirit::karma::string] <<
+                                                                                        boost::spirit::karma::lit(
+                                                                                                "register_service_message: \"")
+                                                                                        << boost::spirit::karma::string
+                                                                                        << "\""
+    };
+
+    boost::spirit::karma::rule<OutputIterator, use_service_request()>
+            use_service_request_{boost::spirit::skip[boost::spirit::karma::string] <<
+                                                                                   boost::spirit::karma::lit(
+                                                                                           "use_service_request: \"")
+                                                                                   << boost::spirit::karma::string
+                                                                                   << "\""
+    };
+
+
+};
+
+template<typename OutputIterator>
+struct generate_local_request_grammar : boost::spirit::karma::grammar<OutputIterator, local_request()>,
+                                        common_generators<OutputIterator> {
+    generate_local_request_grammar() : generate_local_request_grammar::base_type(start) {
+        namespace karma = boost::spirit::karma;
+        start = karma::lit("mkdt/") << major_version_
+                                    << karma::lit(" local_request ") <<
+                                    (common_generators<OutputIterator>::register_service_message_ |
+                                     common_generators<OutputIterator>::use_service_request_)
+                                    << karma::lit(" mkdt_local_message_end\r\n");
+
+    }
+
+    boost::spirit::karma::rule<OutputIterator, local_request()> start;
+    boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
+            boost::spirit::karma::uint_(major_version)
+    };
+};
+
 }
 }
 
