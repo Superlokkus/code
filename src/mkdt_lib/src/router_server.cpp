@@ -43,9 +43,32 @@ void mkdt::router_server_spimpl::tcp_connection::start() {
 
 void mkdt::router_server_spimpl::tcp_connection::message_read(const boost::system::error_code &error,
                                                               std::size_t bytes_transferred) {
+    if (error == boost::asio::error::eof || error == boost::asio::error::connection_reset) {
+        return;
+    }
     if (error)
         throw std::runtime_error{error.message()};
 
+    std::istream stream(&this->in_streambuf_);
+    mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_request request;
+    auto stream_it = std::istreambuf_iterator<char>(stream);
+    this->parser_buffer_.clear();
+    std::copy_n(stream_it, bytes_transferred, std::back_inserter(parser_buffer_));
+    if (bytes_transferred > 0)
+        ++stream_it;
+
+    auto begin = parser_buffer_.cbegin(), end = parser_buffer_.cend();
+    bool valid = boost::spirit::qi::parse(begin, end, grammar, request);
+
+    mkdt::protocol::local_response response;
+    if (!valid) {
+        response = mkdt::protocol::simple_confirm{400, "Bad Request"};
+    } else {
+
+    }
+
+    //boost::spirit::karma::generate(std::back_inserter(last_response_string_), response);
 
     this->start();
 }

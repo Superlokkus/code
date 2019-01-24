@@ -45,6 +45,7 @@ private:
     private:
         boost::asio::ip::tcp::socket socket_;
         boost::asio::streambuf in_streambuf_;
+        std::string parser_buffer_;
     };
 
     void start_async_receive(boost::asio::ip::tcp::acceptor &acceptor);

@@ -63,6 +63,19 @@ using local_request = boost::variant<
         use_service_request, expose_object_message,
         consume_object_request, message_for_object
 >;
+
+struct simple_confirm {
+    uint16_t code;
+    string text;
+};
+
+struct object_answer {
+    simple_confirm request_in_general;
+    object_identifier object{};
+};
+
+using local_response = boost::variant<simple_confirm, object_answer>;
+
 }
 }
 
@@ -102,6 +115,18 @@ BOOST_FUSION_ADAPT_STRUCT(
                 (mkdt::object_identifier, receiver)
                 (mkdt::protocol::string, message)
                 (boost::optional<mkdt::object_identifier>, sender)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+        mkdt::protocol::simple_confirm,
+        (uint16_t, code)
+                (mkdt::protocol::string, text)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+        mkdt::protocol::object_answer,
+        (mkdt::protocol::simple_confirm, request_in_general)
+                (mkdt::object_identifier, object)
 )
 
 namespace mkdt {
@@ -156,8 +181,12 @@ struct common_rules {
                                                                               >> quoted_string
                                                                               >> -(boost::spirit::qi::lit(",")
                                                                                       >> uuid_)};
+    boost::spirit::qi::rule<Iterator, simple_confirm()>
+            simple_confirm_{boost::spirit::qi::uint_parser<uint16_t, 10, 3>()
+                                    >> boost::spirit::qi::omit[+ns::space] >> quoted_string};
 
-
+    boost::spirit::qi::rule<Iterator, object_answer()>
+            object_answer_{simple_confirm_ >> boost::spirit::qi::omit[+ns::space] >> uuid_};
 };
 
 
@@ -181,6 +210,24 @@ struct local_request_grammar
     }
 
     boost::spirit::qi::rule<Iterator, local_request()> start;
+
+};
+
+template<typename Iterator>
+struct local_response_grammar
+        : ::boost::spirit::qi::grammar<Iterator, local_response()>, common_rules<Iterator> {
+    local_response_grammar() : local_response_grammar::base_type(start) {
+
+        namespace qi = boost::spirit::qi;
+
+        start %= qi::lit("mkdt/") >> qi::omit[qi::uint_(major_version)]
+                                  >> qi::omit[+ns::space] >> qi::lit("local_reponse") >> qi::omit[+ns::space]
+                                  >> (common_rules<Iterator>::object_answer_ |
+                                      common_rules<Iterator>::simple_confirm_)
+                                  >> qi::omit[+ns::space] >> qi::lit("mkdt_local_message_end\r\n");
+    }
+
+    boost::spirit::qi::rule<Iterator, local_response()> start;
 
 };
 
@@ -239,12 +286,45 @@ struct common_generators {
                                                                 << -("," << uuid_)
     };
 
+    boost::spirit::karma::rule<OutputIterator, simple_confirm()>
+            simple_confirm_{
+            boost::spirit::karma::uint_ <<
+                                        boost::spirit::karma::lit(" \"") << boost::spirit::karma::string
+                                        << boost::spirit::karma::lit("\"")
+
+    };
+
+    boost::spirit::karma::rule<OutputIterator, object_answer()>
+            object_answer_{
+            simple_confirm_ << uuid_
+    };
+
 };
 
 template<typename OutputIterator>
 struct generate_local_request_grammar : boost::spirit::karma::grammar<OutputIterator, local_request()>,
                                         common_generators<OutputIterator> {
     generate_local_request_grammar() : generate_local_request_grammar::base_type(start) {
+        namespace karma = boost::spirit::karma;
+        start = karma::lit("mkdt/") << major_version_
+                                    << karma::lit(" local_response ") << (
+                                            common_generators<OutputIterator>::object_answer_
+                                            | common_generators<OutputIterator>::unregister_service_message_
+                                            | common_generators<OutputIterator>::simple_confirm_
+                                    ) << karma::lit(" mkdt_local_message_end\r\n");
+
+    }
+
+    boost::spirit::karma::rule<OutputIterator, local_request()> start;
+    boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
+            boost::spirit::karma::uint_(major_version)
+    };
+};
+
+template<typename OutputIterator>
+struct generate_local_response_grammar : boost::spirit::karma::grammar<OutputIterator, local_response()>,
+                                         common_generators<OutputIterator> {
+    generate_local_response_grammar() : generate_local_response_grammar::base_type(start) {
         namespace karma = boost::spirit::karma;
         start = karma::lit("mkdt/") << major_version_
                                     << karma::lit(" local_request ") << (
@@ -258,7 +338,7 @@ struct generate_local_request_grammar : boost::spirit::karma::grammar<OutputIter
 
     }
 
-    boost::spirit::karma::rule<OutputIterator, local_request()> start;
+    boost::spirit::karma::rule<OutputIterator, local_response()> start;
     boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
             boost::spirit::karma::uint_(major_version)
     };
