@@ -9,8 +9,6 @@
 #include <memory>
 #include <functional>
 
-#include <mkdt_protocol.hpp>
-
 void mkdt::router_server_spimpl::start_async_receive(boost::asio::ip::tcp::acceptor &acceptor) {
     auto new_connection = std::make_shared<tcp_connection>(acceptor.get_io_context(), shared_from_this());
     acceptor.async_accept(new_connection->socket(), std::bind(
@@ -23,7 +21,10 @@ void mkdt::router_server_spimpl::start_async_receive(boost::asio::ip::tcp::accep
 
 mkdt::router_server_spimpl::tcp_connection::tcp_connection(boost::asio::io_context &io_context,
                                                            std::shared_ptr<mkdt::router_server_spimpl> server)
-        : socket_(io_context) {
+        : io_context_(io_context),
+          server_(std::move(server)),
+          socket_(io_context_),
+          write_strand_(io_context_) {
 
 }
 
@@ -50,7 +51,6 @@ void mkdt::router_server_spimpl::tcp_connection::message_read(const boost::syste
         throw std::runtime_error{error.message()};
 
     std::istream stream(&this->in_streambuf_);
-    mkdt::protocol::local_request_grammar<std::string::const_iterator> grammar{};
     mkdt::protocol::local_request request;
     auto stream_it = std::istreambuf_iterator<char>(stream);
     this->parser_buffer_.clear();
@@ -59,25 +59,52 @@ void mkdt::router_server_spimpl::tcp_connection::message_read(const boost::syste
         ++stream_it;
 
     auto begin = parser_buffer_.cbegin(), end = parser_buffer_.cend();
-    bool valid = boost::spirit::qi::parse(begin, end, grammar, request);
+    bool valid = boost::spirit::qi::parse(begin, end,
+                                          mkdt::protocol::local_request_grammar<std::string::const_iterator>{},
+                                          request);
 
     mkdt::protocol::local_response response;
     if (!valid) {
         response = mkdt::protocol::simple_confirm{400, "Bad Request"};
     } else {
-
+        response = this->server_->process_request(request);
     }
 
-    //boost::spirit::karma::generate(std::back_inserter(last_response_string_), response);
+    std::string response_string;
+    boost::spirit::karma::generate(std::back_inserter(response_string), mkdt::protocol::generate_local_response_grammar
+            <std::back_insert_iterator<std::string>>{}, response);
+
+    this->send(std::move(response_string));
+
 
     this->start();
+}
+
+void mkdt::router_server_spimpl::tcp_connection::send(std::string message) {
+    this->io_context_.dispatch(boost::asio::bind_executor(this->write_strand_,
+                                                          [me = shared_from_this(), message = std::move(message)]() {
+                                                              const auto write_in_progress = !me->send_queue_.empty();
+                                                              me->send_queue_.push_back(std::move(message));
+                                                              if (!write_in_progress)
+                                                                  me->start_sending_queue();
+                                                          }));
+}
+
+void mkdt::router_server_spimpl::tcp_connection::start_sending_queue() {
+    boost::asio::async_write(this->socket_, boost::asio::buffer(this->send_queue_.front()),
+                             boost::asio::bind_executor(this->write_strand_, [me = shared_from_this()](auto error,
+                                                                                                       auto bytes_transferred) {
+                                 me->response_sent(error, bytes_transferred);
+                             }));
 }
 
 void mkdt::router_server_spimpl::tcp_connection::response_sent(const boost::system::error_code &error,
                                                                std::size_t bytes_transferred) {
     if (error)
         throw std::runtime_error{error.message()};
-
+    this->send_queue_.pop_front();
+    if (!this->send_queue_.empty())
+        this->start_sending_queue();
 }
 
 void mkdt::router_server_spimpl::handle_new_tcp_connection(const boost::system::error_code &error,
@@ -115,6 +142,11 @@ mkdt::router_server_spimpl::router_server_spimpl(boost::asio::io_context &io_con
 void mkdt::router_server_spimpl::start() {
     this->start_async_receive(this->tcp_v4_);
     this->start_async_receive(this->tcp_v6_);
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::process_request(const mkdt::protocol::local_request &request) {
+    return mkdt::protocol::local_response();
 }
 
 mkdt::router_server_spimpl::~router_server_spimpl() = default;

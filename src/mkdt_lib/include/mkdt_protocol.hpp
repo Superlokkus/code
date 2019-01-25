@@ -307,14 +307,15 @@ struct generate_local_request_grammar : boost::spirit::karma::grammar<OutputIter
     generate_local_request_grammar() : generate_local_request_grammar::base_type(start) {
         namespace karma = boost::spirit::karma;
         start = karma::lit("mkdt/") << major_version_
-                                    << karma::lit(" local_response ") << (
-                                            common_generators<OutputIterator>::object_answer_
+                                    << karma::lit(" local_request ") << (
+                                            common_generators<OutputIterator>::register_service_message_
                                             | common_generators<OutputIterator>::unregister_service_message_
-                                            | common_generators<OutputIterator>::simple_confirm_
+                                            | common_generators<OutputIterator>::use_service_request_
+                                            | common_generators<OutputIterator>::expose_object_message_
+                                            | common_generators<OutputIterator>::consume_object_request_
+                                            | common_generators<OutputIterator>::message_for_object_
                                     ) << karma::lit(" mkdt_local_message_end\r\n");
-
     }
-
     boost::spirit::karma::rule<OutputIterator, local_request()> start;
     boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
             boost::spirit::karma::uint_(major_version)
@@ -327,17 +328,13 @@ struct generate_local_response_grammar : boost::spirit::karma::grammar<OutputIte
     generate_local_response_grammar() : generate_local_response_grammar::base_type(start) {
         namespace karma = boost::spirit::karma;
         start = karma::lit("mkdt/") << major_version_
-                                    << karma::lit(" local_request ") << (
-                                            common_generators<OutputIterator>::register_service_message_
+                                    << karma::lit(" local_response ") << (
+                                            common_generators<OutputIterator>::object_answer_
                                             | common_generators<OutputIterator>::unregister_service_message_
-                                            | common_generators<OutputIterator>::use_service_request_
-                                            | common_generators<OutputIterator>::expose_object_message_
-                                            | common_generators<OutputIterator>::consume_object_request_
-                                            | common_generators<OutputIterator>::message_for_object_
+                                            | common_generators<OutputIterator>::simple_confirm_
                                     ) << karma::lit(" mkdt_local_message_end\r\n");
 
     }
-
     boost::spirit::karma::rule<OutputIterator, local_response()> start;
     boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
             boost::spirit::karma::uint_(major_version)

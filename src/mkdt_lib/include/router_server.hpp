@@ -7,8 +7,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <deque>
 
 #include <boost/asio.hpp>
+
+#include <mkdt_protocol.hpp>
 
 namespace mkdt {
 
@@ -21,6 +24,8 @@ public:
     void start();
 
     ~router_server_spimpl();
+
+    mkdt::protocol::local_response process_request(const mkdt::protocol::local_request &request);
 
 private:
     boost::asio::io_context &io_context_;
@@ -36,16 +41,26 @@ private:
 
         void start();
 
+    private:
+        boost::asio::io_context &io_context_;
+        std::shared_ptr<router_server_spimpl> server_;
+        boost::asio::ip::tcp::socket socket_;
+        boost::asio::streambuf in_streambuf_;
+        std::string parser_buffer_;
+
+        boost::asio::io_context::strand write_strand_;
+        std::deque<std::string> send_queue_;
+
         void message_read(const boost::system::error_code &error,
                           std::size_t bytes_transferred);
 
         void response_sent(const boost::system::error_code &error,
                            std::size_t bytes_transferred);
 
-    private:
-        boost::asio::ip::tcp::socket socket_;
-        boost::asio::streambuf in_streambuf_;
-        std::string parser_buffer_;
+        void send(std::string message);
+
+        void start_sending_queue();
+
     };
 
     void start_async_receive(boost::asio::ip::tcp::acceptor &acceptor);
