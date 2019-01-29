@@ -74,15 +74,21 @@ struct example_client {
         BOOST_LOG_TRIVIAL(info) << "Register  service \"" << name << "\"";
         auto service_object = std::make_shared<mkdt::object_remoting_mockup::
         stub_adapter<mkdt::object_remoting_mockup::server_stub>>(this->registry_);
-        this->registry_.register_service(name, service_object, [=]() {
-            BOOST_LOG_TRIVIAL(info) << "Registered service " << name;
+        this->registry_.register_service(name, service_object, [=](auto error) {
+            if (error)
+                BOOST_LOG_TRIVIAL(error) << "Error while registering: " << error.what();
+            else
+                BOOST_LOG_TRIVIAL(info) << "Registered service " << name;
         });
     }
 
     void use_service(mkdt::service_identifier name) {
         BOOST_LOG_TRIVIAL(info) << "Use  service \"" << name << "\"";
-        this->registry_.use_service_interface(name, [name](auto object_identifier) {
-            BOOST_LOG_TRIVIAL(info) << "Got object identifier \"" << boost::uuids::to_string(object_identifier)
+        this->registry_.use_service_interface(name, [name](auto error, auto object_identifier) {
+            if (error)
+                BOOST_LOG_TRIVIAL(error) << "Error trying to use service " << name << " : " << error.what();
+            else
+                BOOST_LOG_TRIVIAL(info) << "Got object identifier \"" << boost::uuids::to_string(object_identifier)
                                     << "\" for service " << name;
         });
     }

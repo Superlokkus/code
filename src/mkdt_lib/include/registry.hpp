@@ -56,17 +56,17 @@ public:
      */
     void register_service(service_identifier service_id,
                           std::shared_ptr<receiver> service_object,
-                          std::function<void(void)> completion_handler = []() {});
+                          std::function<void(error)> completion_handler);
 
     /*!
      *
      * @param service_id
      * @param handler
      */
-    void use_service_interface(service_identifier service_id, std::function<void(object_identifier)> handler);
+    void use_service_interface(service_identifier service_id, std::function<void(error, object_identifier)> handler);
 
     /*!
-     * @tparam IdentifierHandler h of Handler: h(object_identifier)
+     * @tparam IdentifierHandler h of Handler: h(error,object_identifier)
      * @param service_id
      * @param object
      * @param handler
@@ -79,7 +79,7 @@ public:
     * @param object
     * @param handler
     */
-    void consume(object_identifier object, std::function<void(bool, object_identifier)> handler);
+    void consume(object_identifier object, std::function<void(error, bool, object_identifier)> handler);
 
 
     /*!
@@ -88,7 +88,7 @@ public:
      * @param handler
      */
     void send_message_to_object(const object_identifier &receiver, const std::string &message,
-                                std::function<void(void)> handler);
+                                std::function<void(error)> handler);
 
     boost::asio::io_context &get_executor() {
         return this->io_context_;

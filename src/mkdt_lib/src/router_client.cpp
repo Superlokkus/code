@@ -19,35 +19,31 @@ mkdt::router_client::router_client(boost::asio::io_context &io_context, uint16_t
 }
 
 void mkdt::router_client::register_service(mkdt::service_identifier service_id,
-                                           std::function<void(void)> handler,
+                                           std::function<void(error)> handler,
                                            std::function<void(std::function<void(object_identifier)>)>
                                            new_service_request_handler) {
-    boost::asio::dispatch(this->router_io_context_, boost::asio::bind_executor(this->router_strand_, std::bind(
-            &router_client::register_new_service, this, service_id, std::move(handler)
-    )));
+    boost::asio::dispatch(this->router_io_context_, boost::asio::bind_executor(this->router_strand_, [=]() {
+        auto after_open = [=]() {
+            boost::asio::post(this->router_io_context_, std::bind(handler, mkdt::error{}));
+        };
+        if (!this->local_socket_.is_open()) {
+            this->open_socket(after_open);
+        } else {
+            after_open();
+        }
+    }));
 }
 
-void mkdt::router_client::register_new_service(mkdt::service_identifier service_id,
-                                               std::function<void(void)> user_handler) {
-    auto after_open = [=]() {
-        boost::asio::post(this->router_io_context_, std::move(user_handler));
-    };
-    if (!this->local_socket_.is_open()) {
-        this->open_socket(after_open);
-    } else {
-        after_open();
-    }
-}
 
 void mkdt::router_client::use_service_interface(mkdt::service_identifier service_id,
-                                                std::function<void(object_identifier)> handler) {
+                                                std::function<void(error, object_identifier)> handler) {
     boost::asio::post(this->router_io_context_, boost::asio::bind_executor(this->router_strand_, std::bind(
             &router_client::service_lookup, this, service_id, std::move(handler)
     )));
 }
 
 void mkdt::router_client::service_lookup(mkdt::service_identifier service_id,
-                                         std::function<void(object_identifier)> user_handler) {
+                                         std::function<void(error, object_identifier)> user_handler) {
 
 }
 

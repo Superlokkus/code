@@ -27,7 +27,7 @@ public:
      * @param service_id
      *
      */
-    void register_service(service_identifier service_id, std::function<void(void)> handler,
+    void register_service(service_identifier service_id, std::function<void(error)> handler,
                           std::function<void(std::function<void(object_identifier)>)> new_service_request_handler);
 
     void unregister_service(object_identifier object_id);
@@ -36,12 +36,12 @@ public:
      * @param service_id
      * @param handler
      */
-    void use_service_interface(service_identifier service_id, std::function<void(object_identifier)> handler);
+    void use_service_interface(service_identifier service_id, std::function<void(error, object_identifier)> handler);
 
     /*!
      * @tparam EndpointObject Must fullfill for values s of EndpointObject: s->receive(const std::string& message,
      * const object_identifier& sender)
-     * @tparam IdentifierHandler h of Handler: h(object_identifier)
+     * @tparam IdentifierHandler h of Handler: h(error,object_identifier)
      * @param service_id
      * @param object
      * @param handler
@@ -54,7 +54,7 @@ public:
      * @param object
      * @param handler
      */
-    void consume(object_identifier object, std::function<void(bool, object_identifier)> handler);
+    void consume(object_identifier object, std::function<void(error, bool, object_identifier)> handler);
 
 
     /*!
@@ -79,11 +79,8 @@ private:
     boost::uuids::random_generator uuid_gen_;
     std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
 
-    void register_new_service(service_identifier service_id,
-                              std::function<void(void)> user_handler);
-
     void service_lookup(service_identifier service_id,
-                        std::function<void(object_identifier)> user_handler);
+                        std::function<void(error, object_identifier)> user_handler);
 
     /*! For use in already synchronized methods, unsychronized
      * @param then Will be called after socket has been connected, sychronized with strand

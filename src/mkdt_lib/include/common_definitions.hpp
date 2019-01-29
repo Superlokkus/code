@@ -9,6 +9,8 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <boost/asio.hpp>
+
 namespace mkdt {
 
 using service_identifier = std::string;
@@ -16,6 +18,30 @@ using service_identifier = std::string;
 using object_identifier = boost::uuids::uuid;
 
 const unsigned mkdt_server_port_number{1021u}; //!< Currently exp1, must be changed
+
+struct error : std::exception {
+    error() = default;
+
+    error(std::string message) : set_(true), message_(message) {
+
+    }
+
+    error(const boost::system::error_code &error) : set_(true), message_(error.message()) {
+
+    }
+
+    explicit operator bool() const noexcept {
+        return this->set_;
+    }
+
+    virtual const char *what() const noexcept override {
+        return this->message_.c_str();
+    }
+
+private:
+    bool set_{false};
+    std::string message_;
+};
 
 }
 
