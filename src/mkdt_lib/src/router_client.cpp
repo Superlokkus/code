@@ -23,13 +23,13 @@ void mkdt::router_client::register_service(mkdt::service_identifier service_id,
                                            std::function<void(std::function<void(object_identifier)>)>
                                            new_service_request_handler) {
     boost::asio::dispatch(this->router_io_context_, boost::asio::bind_executor(this->router_strand_, [=]() {
-        auto after_open = [=]() {
-            boost::asio::post(this->router_io_context_, std::bind(handler, mkdt::error{}));
+        auto after_open = [=](auto error) {
+            boost::asio::post(this->router_io_context_, std::bind(handler, error));
         };
         if (!this->local_socket_.is_open()) {
             this->open_socket(after_open);
         } else {
-            after_open();
+            after_open(mkdt::error{});
         }
     }));
 }
@@ -69,7 +69,7 @@ void mkdt::router_client::open_socket(callback &&then) {
         this->local_socket_.async_connect(first_entry->endpoint(), boost::asio::bind_executor(this->router_strand_,
                 [this,then] (auto error) {
             if (error)
-                throw std::runtime_error{std::string{"Could not connect: "} + error.message()};
+                return then(mkdt::error{error});
 
             boost::asio::async_read_until(this->local_socket_, this->in_streambuf_,
                             boost::asio::string_view{"mkdt_local_message_end\r\n"},
@@ -78,7 +78,7 @@ void mkdt::router_client::open_socket(callback &&then) {
                                                           this, std::placeholders::_1, std::placeholders::_2
                                                           )));
 
-            then();
+                    then(mkdt::error{});
         }));
 
     }));
