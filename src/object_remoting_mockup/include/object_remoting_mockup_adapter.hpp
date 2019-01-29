@@ -24,11 +24,13 @@ struct stub_adapter : StubT, registry::receiver {
     }
 
     void receive(const std::string &message, boost::optional<object_identifier> sender) override {
+        if (sender)
+            this->last_sender_ = *sender;
         this->handle_incoming_data(message);
     }
 
 private:
-    registry registry_;
+    registry &registry_;
     object_identifier last_sender_;
 
     void send_via_registry(std::shared_ptr<std::string> message) {

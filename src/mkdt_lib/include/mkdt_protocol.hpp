@@ -76,6 +76,8 @@ struct object_answer {
 
 using local_response = boost::variant<simple_confirm, object_answer>;
 
+using local_message = boost::variant<local_request, local_response>;
+
 }
 }
 
@@ -231,6 +233,21 @@ struct local_response_grammar
 
 };
 
+template<typename Iterator>
+struct local_message_grammar
+        : ::boost::spirit::qi::grammar<Iterator, local_message()>, common_rules<Iterator> {
+    local_message_grammar() : local_message_grammar::base_type(start) {
+
+        namespace qi = boost::spirit::qi;
+
+        start %= request | response;
+    }
+
+    local_request_grammar<Iterator> request;
+    local_response_grammar<Iterator> response;
+    boost::spirit::qi::rule<Iterator, local_message()> start;
+};
+
 template<typename OutputIterator>
 struct common_generators {
     boost::spirit::karma::rule<OutputIterator, boost::uuids::uuid()>
@@ -339,6 +356,20 @@ struct generate_local_response_grammar : boost::spirit::karma::grammar<OutputIte
     boost::spirit::karma::rule<OutputIterator, boost::spirit::karma::unused_type()> major_version_{
             boost::spirit::karma::uint_(major_version)
     };
+};
+
+template<typename OutputIterator>
+struct generate_local_message_grammar : boost::spirit::karma::grammar<OutputIterator, local_message()>,
+                                        common_generators<OutputIterator> {
+    generate_local_message_grammar() : generate_local_message_grammar::base_type(start) {
+        namespace karma = boost::spirit::karma;
+        start = request | response;
+
+    }
+
+    boost::spirit::karma::rule<OutputIterator, local_message()> start;
+    generate_local_request_grammar<OutputIterator> request;
+    generate_local_response_grammar<OutputIterator> response;
 };
 
 }

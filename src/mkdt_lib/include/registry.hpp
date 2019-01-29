@@ -15,6 +15,8 @@
 #include <boost/asio.hpp>
 #include <boost/variant.hpp>
 #include <boost/optional.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 
 #include <router_client.hpp>
 #include <common_definitions.hpp>
@@ -28,6 +30,13 @@ public:
             io_context_(io_context),
             registry_strand_(io_context_),
             router_(io_context_) {
+
+    }
+
+    registry(boost::asio::io_context &io_context, uint16_t custom_port) :
+            io_context_(io_context),
+            registry_strand_(io_context_),
+            router_(io_context_, custom_port) {
 
     }
 
@@ -90,8 +99,10 @@ private:
     boost::asio::io_context::strand registry_strand_;
     mkdt::router_client router_;
 
-    using service_object = std::shared_ptr<receiver>;
-    std::unordered_map<service_identifier, service_object> services_;
+    boost::uuids::random_generator uuid_gen_{};
+
+    std::unordered_map<service_identifier, object_identifier> services_;
+    std::unordered_map<object_identifier, std::shared_ptr<receiver>> objects_;
 };
 
 }

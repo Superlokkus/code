@@ -38,10 +38,10 @@ object <id> example_method_1 <word> <number>
 
 struct example_client {
 
-    example_client() :
+    example_client(uint16_t port) :
             io_context_{BOOST_ASIO_CONCURRENCY_HINT_SAFE},
             work_guard_{boost::asio::make_work_guard(io_context_)},
-            registry_(io_context_) {
+            registry_(io_context_, port) {
 
         const auto thread_count{std::max<unsigned>(std::thread::hardware_concurrency(), 1)};
 
@@ -74,7 +74,9 @@ struct example_client {
         BOOST_LOG_TRIVIAL(info) << "Register  service \"" << name << "\"";
         auto service_object = std::make_shared<mkdt::object_remoting_mockup::
         stub_adapter<mkdt::object_remoting_mockup::server_stub>>(this->registry_);
-        this->registry_.register_service(name, service_object);
+        this->registry_.register_service(name, service_object, [=]() {
+            BOOST_LOG_TRIVIAL(info) << "Registered service " << name;
+        });
     }
 
     void use_service(mkdt::service_identifier name) {
@@ -104,9 +106,20 @@ private:
     }
 };
 
-int main() {
+int main(int argc, char *argv[]) {
     BOOST_LOG_TRIVIAL(info) << "MKDT example client\n";
-    example_client client{};
+    uint16_t port{mkdt::mkdt_server_port_number};
+    if (argc == 1) {
+        BOOST_LOG_TRIVIAL(info) << "Starting on default port " << mkdt::mkdt_server_port_number << "\n";
+    } else if (argc == 2) {
+        port = std::stoul(argv[1]);
+        BOOST_LOG_TRIVIAL(info) << "Start on on port " << port << "\n";
+    } else {
+        std::cerr << "Usage " << argv[0] << "\n" << argv[0] << " <port>\n";
+        throw std::runtime_error{"Usage error"};
+    }
+
+    example_client client{port};
 
     std::cout << menu_text << "Input: ";
     for (std::string input; std::getline(std::cin, input); std::cout << "Input: ") {

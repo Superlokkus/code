@@ -21,10 +21,14 @@ public:
 
     router_client(boost::asio::io_context &io_context);
 
+    router_client(boost::asio::io_context &io_context, uint16_t port);
+
     /*!
      * @param service_id
+     *
      */
-    void register_service(service_identifier service_id, std::function<void(void)> handler);
+    void register_service(service_identifier service_id, std::function<void(void)> handler,
+                          std::function<void(std::function<void(object_identifier)>)> new_service_request_handler);
 
     void unregister_service(object_identifier object_id);
     /*!
@@ -67,15 +71,28 @@ public:
 private:
     boost::asio::io_context &router_io_context_;
     boost::asio::io_context::strand router_strand_;
+    boost::asio::ip::tcp::socket local_socket_;
+    boost::asio::ip::tcp::resolver local_resolver_;
+    boost::asio::streambuf in_streambuf_;
+    uint16_t port_{mkdt::mkdt_server_port_number};
 
     boost::uuids::random_generator uuid_gen_;
     std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
 
-    void register_new_service_in_cache(service_identifier service_id,
-                                       std::function<void(void)> user_handler);
+    void register_new_service(service_identifier service_id,
+                              std::function<void(void)> user_handler);
 
     void service_lookup(service_identifier service_id,
                         std::function<void(object_identifier)> user_handler);
+
+    /*! For use in already synchronized methods, unsychronized
+     * @param then Will be called after socket has been connected, sychronized with strand
+     */
+    template<typename callback>
+    void open_socket(callback &&then);
+
+    void inbound_local_message_handler(const boost::system::error_code &error,
+                                       std::size_t bytes_transferred);
 };
 }
 

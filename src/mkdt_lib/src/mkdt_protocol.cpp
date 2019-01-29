@@ -11,7 +11,13 @@ template
 struct mkdt::protocol::local_response_grammar<std::string::const_iterator>;
 
 template
+struct mkdt::protocol::local_message_grammar<std::string::const_iterator>;
+
+template
 struct mkdt::protocol::generate_local_request_grammar<std::back_insert_iterator<std::string>>;
 
 template
 struct mkdt::protocol::generate_local_response_grammar<std::back_insert_iterator<std::string>>;
+
+template
+struct mkdt::protocol::generate_local_message_grammar<std::back_insert_iterator<std::string>>;
