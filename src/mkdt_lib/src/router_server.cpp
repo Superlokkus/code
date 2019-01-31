@@ -9,6 +9,8 @@
 #include <memory>
 #include <functional>
 
+#include <boost/log/trivial.hpp>
+
 void mkdt::router_server_spimpl::start_async_receive(boost::asio::ip::tcp::acceptor &acceptor) {
     auto new_connection = std::make_shared<tcp_connection>(acceptor.get_io_context(), shared_from_this());
     acceptor.async_accept(new_connection->socket(), std::bind(
@@ -70,9 +72,13 @@ void mkdt::router_server_spimpl::tcp_connection::message_read(const boost::syste
         response = this->server_->process_request(request);
     }
 
+    BOOST_LOG_TRIVIAL(info) << parser_buffer_;
+
     std::string response_string;
     boost::spirit::karma::generate(std::back_inserter(response_string), mkdt::protocol::generate_local_response_grammar
             <std::back_insert_iterator<std::string>>{}, response);
+
+    BOOST_LOG_TRIVIAL(info) << response_string;
 
     this->send(std::move(response_string));
 

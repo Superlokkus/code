@@ -40,8 +40,8 @@ void mkdt::router_client::send_request(const mkdt::protocol::local_request &requ
 
 
     auto send = [this](std::shared_ptr<std::string> message_string, auto user_completion_handler) {
-        //CURSOR+
-        //TODO CURSOR
+        this->request_completion_handlers_.push_back(user_completion_handler);
+        this->last_usable_connection_->send(std::move(*message_string));
     };
 
     auto after_open = [=](auto error) {
@@ -86,6 +86,10 @@ void mkdt::router_client::open_socket(callback &&then) {
         }
 
                 this->last_usable_connection_ = std::make_shared<tcp_connection>(this->router_io_context_, *this);
+                for (auto &handler : this->request_completion_handlers_) {
+                    handler(mkdt::error{"TCP connection closed"}, protocol::simple_confirm{});
+                }
+                this->request_completion_handlers_.clear();
                 last_usable_connection_->socket().async_connect(first_entry->endpoint(),
                                                                 boost::asio::bind_executor(this->router_strand_,
                 [this,then] (auto error) {
@@ -145,7 +149,7 @@ void mkdt::router_client::tcp_connection::message_read(const boost::system::erro
 
     boost::optional<mkdt::protocol::local_response> response;
     if (!valid) {
-        response = mkdt::protocol::simple_confirm{400, "Bad Request"};
+        throw mkdt::error{"Server response unreadable"};
     } else {
         response = this->client_.process_message(message);
     }
@@ -192,7 +196,10 @@ void mkdt::router_client::tcp_connection::response_sent(const boost::system::err
 
 boost::optional<mkdt::protocol::local_response>
 mkdt::router_client::process_message(const mkdt::protocol::local_message &message) {
-
+    if (message.which() == 1) {
+        this->request_completion_handlers_.front()(mkdt::error{}, boost::get<protocol::local_response>(message));
+        this->request_completion_handlers_.pop_front();
+    }
 
     return boost::optional<mkdt::protocol::local_response>();
 }

@@ -76,6 +76,7 @@ private:
     boost::asio::ip::tcp::resolver local_resolver_;
     uint16_t port_{mkdt::mkdt_server_port_number};
     std::shared_ptr<tcp_connection> last_usable_connection_;
+    std::deque<std::function<void(error, mkdt::protocol::local_response)>> request_completion_handlers_;
 
     boost::uuids::random_generator uuid_gen_;
     std::unordered_map<object_identifier, service_identifier> object_id_to_service_id_;
