@@ -78,6 +78,8 @@ using local_response = boost::variant<simple_confirm, object_answer>;
 
 using local_message = boost::variant<local_request, local_response>;
 
+mkdt::error response_to_error(const local_response &response);
+
 }
 }
 
