@@ -29,6 +29,8 @@ struct local_message_phrases_fixture {
                                                           "\" 42 example message\""
                                                           " mkdt_local_message_end\r\n"};
 
+    std::string simple_response_rule_text{"200 \"OK\""};
+    std::string object_answer_rule_text{"200 \"OK\" 2BC69EAD-4ABA-4A39-92C0-9565F4D464AA"};
     std::string simple_response{"mkdt/1 local_response 200 \"OK\" mkdt_local_message_end"};
 
     std::vector<std::string> invalid_stuff{
@@ -145,6 +147,33 @@ BOOST_AUTO_TEST_CASE(message_for_object_request_message_grammar_test) {
     BOOST_TEST(*object_message.sender == raw_uuid2,
                boost::test_tools::per_element());
 }
+
+BOOST_AUTO_TEST_CASE(simple_response_rule_test) {
+    mkdt::protocol::common_rules<std::string::const_iterator> rules{};
+    mkdt::protocol::simple_confirm message{};
+    parse_phrase(simple_response_rule_text, rules.simple_confirm_, message);
+
+
+    BOOST_CHECK_EQUAL(message.code, 200);
+    BOOST_CHECK_EQUAL(message.text, "OK");
+};
+
+BOOST_AUTO_TEST_CASE(object_answer_rule_test) {
+    mkdt::protocol::common_rules<std::string::const_iterator> rules{};
+    mkdt::protocol::object_answer message{};
+    parse_phrase(object_answer_rule_text, rules.object_answer_, message);
+
+    BOOST_CHECK_EQUAL(message.request_in_general.code, 200);
+    BOOST_CHECK_EQUAL(message.request_in_general.text, "OK");
+
+    const std::array<uint8_t, 16> raw_uuid2{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65,
+                                            0xf4,
+                                            0xd4, 0x64, 0xaa};
+
+    BOOST_CHECK(!message.object.is_nil());
+    BOOST_TEST(message.object == raw_uuid2,
+               boost::test_tools::per_element());
+};
 
 BOOST_AUTO_TEST_CASE(simple_response_grammar_test) {
     mkdt::protocol::local_response_grammar<std::string::const_iterator> grammar{};

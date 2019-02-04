@@ -225,7 +225,7 @@ struct local_response_grammar
         namespace qi = boost::spirit::qi;
 
         start %= qi::lit("mkdt/") >> qi::omit[qi::uint_(major_version)]
-                                  >> qi::omit[+ns::space] >> qi::lit("local_reponse") >> qi::omit[+ns::space]
+                                  >> qi::omit[+ns::space] >> qi::lit("local_response") >> qi::omit[+ns::space]
                                   >> (common_rules<Iterator>::object_answer_ |
                                       common_rules<Iterator>::simple_confirm_)
                                   >> qi::omit[+ns::space] >> qi::lit("mkdt_local_message_end\r\n");
