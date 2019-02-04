@@ -152,9 +152,48 @@ void mkdt::router_server_spimpl::start() {
 
 mkdt::protocol::local_response
 mkdt::router_server_spimpl::process_request(const mkdt::protocol::local_request &request) {
-    return mkdt::protocol::local_response();
+    handle_request_visitor request_visitor{*this};
+    auto response = boost::apply_visitor(request_visitor, request);
+
+    return response;
 }
 
 mkdt::router_server_spimpl::~router_server_spimpl() = default;
 
 mkdt::router_server::~router_server() = default;
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const protocol::register_service_message &) {
+    protocol::simple_confirm response{200, "OK"};
+
+    return response;
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::unregister_service_message &) {
+    protocol::simple_confirm response{200, "OK"};
+
+    return response;
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::use_service_request &) {
+    protocol::object_answer response{200, "OK"};
+
+    return response;
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::expose_object_message &) {
+    return mkdt::protocol::local_response();
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::consume_object_request &) {
+    return mkdt::protocol::local_response();
+}
+
+mkdt::protocol::local_response
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::message_for_object &) {
+    return mkdt::protocol::local_response();
+}

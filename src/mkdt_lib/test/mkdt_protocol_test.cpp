@@ -6,7 +6,7 @@
 
 BOOST_AUTO_TEST_SUITE(mkdt_protocol_test)
 
-struct local_request_phrases_fixture {
+struct local_message_phrases_fixture {
     std::string expose_object_request{"mkdt/1  local_request  \t expose_object_message: \"Fo bar\t \\\"8\","
                                       "2BC69EAD-4ABA-4A39-92C0-9565F4D464B4  mkdt_local_message_end\r\n"};
     std::string register_service_request{
@@ -28,6 +28,8 @@ struct local_request_phrases_fixture {
                                                           "2BC69EAD-4ABA-4A39-92C0-9565F4D464B5,"
                                                           "\" 42 example message\""
                                                           " mkdt_local_message_end\r\n"};
+
+    std::string simple_response{"mkdt/1 local_response 200 \"OK\" mkdt_local_message_end"};
 
     std::vector<std::string> invalid_stuff{
             {"mkdt/2 local_request register_service_message: \"FooBar\" mkdt_local_message_end\r\n"},
@@ -58,7 +60,7 @@ struct local_request_phrases_fixture {
     }
 };
 
-BOOST_FIXTURE_TEST_SUITE(local_request_phrases_tests, local_request_phrases_fixture)
+BOOST_FIXTURE_TEST_SUITE(local_request_phrases_tests, local_message_phrases_fixture)
 
 BOOST_AUTO_TEST_CASE(register_service_rule_test) {
     mkdt::protocol::common_rules<std::string::const_iterator> rules{};
@@ -115,6 +117,61 @@ BOOST_AUTO_TEST_CASE(message_for_object_request_test) {
     BOOST_CHECK(!object_message.sender->is_nil());
     BOOST_TEST(*object_message.sender == raw_uuid2,
                boost::test_tools::per_element());
+}
+
+BOOST_AUTO_TEST_CASE(message_for_object_request_message_grammar_test) {
+    mkdt::protocol::local_message_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_message message{};
+    parse_phrase(message_for_object_request, grammar, message);
+
+    BOOST_REQUIRE_EQUAL(message.which(), 0);
+    BOOST_REQUIRE_EQUAL(boost::get<mkdt::protocol::local_request>(message).which(), 5);
+    const auto &object_message = boost::get<mkdt::protocol::message_for_object>(
+            boost::get<mkdt::protocol::local_request>(message));
+    BOOST_CHECK_EQUAL(object_message.service_name, "Service Name");
+    const std::array<uint8_t, 16> raw_uuid{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65, 0xf4,
+                                           0xd4, 0x64, 0xb5};
+    BOOST_CHECK(!object_message.receiver.is_nil());
+    BOOST_TEST(object_message.receiver == raw_uuid,
+               boost::test_tools::per_element());
+
+    BOOST_CHECK_EQUAL(object_message.message, " 42 example message");
+
+    const std::array<uint8_t, 16> raw_uuid2{0x2b, 0xc6, 0x9e, 0xad, 0x4a, 0xba, 0x4a, 0x39, 0x92, 0xc0, 0x95, 0x65,
+                                            0xf4,
+                                            0xd4, 0x64, 0xbf};
+    BOOST_REQUIRE(object_message.sender);
+    BOOST_CHECK(!object_message.sender->is_nil());
+    BOOST_TEST(*object_message.sender == raw_uuid2,
+               boost::test_tools::per_element());
+}
+
+BOOST_AUTO_TEST_CASE(simple_response_grammar_test) {
+    mkdt::protocol::local_response_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_response message{};
+    parse_phrase(simple_response, grammar, message);
+
+    BOOST_REQUIRE_EQUAL(message.which(), 0);
+    const auto &simple_response = boost::get<mkdt::protocol::simple_confirm>(message);
+
+    BOOST_CHECK_EQUAL(simple_response.code, 200);
+    BOOST_CHECK_EQUAL(simple_response.text, "OK");
+
+}
+
+BOOST_AUTO_TEST_CASE(simple_response_message_grammar_test) {
+    mkdt::protocol::local_message_grammar<std::string::const_iterator> grammar{};
+    mkdt::protocol::local_message message{};
+    parse_phrase(simple_response, grammar, message);
+
+    BOOST_REQUIRE_EQUAL(message.which(), 1);
+    BOOST_REQUIRE_EQUAL(boost::get<mkdt::protocol::local_response>(message).which(), 0);
+    const auto &simple_response = boost::get<mkdt::protocol::simple_confirm>(
+            boost::get<mkdt::protocol::local_response>(message));
+
+    BOOST_CHECK_EQUAL(simple_response.code, 200);
+    BOOST_CHECK_EQUAL(simple_response.text, "OK");
+
 }
 
 BOOST_AUTO_TEST_CASE(message_for_object_without_sender_request_test) {

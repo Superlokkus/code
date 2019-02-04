@@ -63,6 +63,25 @@ private:
 
     };
 
+    struct handle_request_visitor : boost::static_visitor<mkdt::protocol::local_response> {
+        handle_request_visitor(router_server_spimpl &server) : server_(server) {}
+
+        mkdt::protocol::local_response operator()(const protocol::register_service_message &);
+
+        mkdt::protocol::local_response operator()(const protocol::unregister_service_message &);
+
+        mkdt::protocol::local_response operator()(const protocol::use_service_request &);
+
+        mkdt::protocol::local_response operator()(const protocol::expose_object_message &);
+
+        mkdt::protocol::local_response operator()(const protocol::consume_object_request &);
+
+        mkdt::protocol::local_response operator()(const protocol::message_for_object &);
+
+    private:
+        router_server_spimpl &server_;
+    };
+
     void start_async_receive(boost::asio::ip::tcp::acceptor &acceptor);
 
     void handle_new_tcp_connection(const boost::system::error_code &error,
