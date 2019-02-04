@@ -31,7 +31,7 @@ struct local_message_phrases_fixture {
 
     std::string simple_response_rule_text{"200 \"OK\""};
     std::string object_answer_rule_text{"200 \"OK\" 2BC69EAD-4ABA-4A39-92C0-9565F4D464AA"};
-    std::string simple_response{"mkdt/1 local_response 200 \"OK\" mkdt_local_message_end"};
+    std::string simple_response{"mkdt/1 local_response 200 \"OK\" mkdt_local_message_end\r\n"};
 
     std::vector<std::string> invalid_stuff{
             {"mkdt/2 local_request register_service_message: \"FooBar\" mkdt_local_message_end\r\n"},

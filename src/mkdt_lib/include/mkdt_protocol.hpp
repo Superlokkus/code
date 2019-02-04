@@ -349,7 +349,6 @@ struct generate_local_response_grammar : boost::spirit::karma::grammar<OutputIte
         start = karma::lit("mkdt/") << major_version_
                                     << karma::lit(" local_response ") << (
                                             common_generators<OutputIterator>::object_answer_
-                                            | common_generators<OutputIterator>::unregister_service_message_
                                             | common_generators<OutputIterator>::simple_confirm_
                                     ) << karma::lit(" mkdt_local_message_end\r\n");
 
