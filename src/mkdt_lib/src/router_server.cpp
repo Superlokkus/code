@@ -8,6 +8,8 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <algorithm>
+#include <iterator>
 
 #include <boost/log/trivial.hpp>
 
@@ -69,7 +71,7 @@ void mkdt::router_server_spimpl::tcp_connection::message_read(const boost::syste
     if (!valid) {
         response = mkdt::protocol::simple_confirm{400, "Bad Request"};
     } else {
-        response = this->server_->process_request(request);
+        response = this->server_->process_request(request, shared_from_this());
     }
 
     BOOST_LOG_TRIVIAL(info) << parser_buffer_;
@@ -142,7 +144,8 @@ mkdt::router_server_spimpl::router_server_spimpl(boost::asio::io_context &io_con
         tcp_v4_{io_context, boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v4(),
                                                            port}},
         tcp_v6_{io_context, boost::asio::ip::tcp::endpoint{boost::asio::ip::tcp::v6(),
-                                                           port}} {
+                                                           port}},
+        default_random_engine_(std::random_device()()) {
 }
 
 void mkdt::router_server_spimpl::start() {
@@ -151,8 +154,9 @@ void mkdt::router_server_spimpl::start() {
 }
 
 mkdt::protocol::local_response
-mkdt::router_server_spimpl::process_request(const mkdt::protocol::local_request &request) {
-    handle_request_visitor request_visitor{*this};
+mkdt::router_server_spimpl::process_request(const mkdt::protocol::local_request &request,
+                                            router_client_endpoint endpoint_making_request) {
+    handle_request_visitor request_visitor{*this, endpoint_making_request};
     auto response = boost::apply_visitor(request_visitor, request);
 
     return response;
@@ -163,8 +167,27 @@ mkdt::router_server_spimpl::~router_server_spimpl() = default;
 mkdt::router_server::~router_server() = default;
 
 mkdt::protocol::local_response
-mkdt::router_server_spimpl::handle_request_visitor::operator()(const protocol::register_service_message &) {
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const protocol::register_service_message &request) {
     protocol::simple_confirm response{200, "OK"};
+
+    if (request.service_name.empty() || request.service_name == " ") {
+        response.code = 422;
+        response.text = "Will not register an empty or blank service name";
+        return response;
+    }
+
+    const auto endpoint_range = this->server_.services_by_endpoint_.equal_range(this->current_endpoint_);
+    std::pair<const router_client_endpoint, std::string> searched_for_value =
+            std::make_pair(this->current_endpoint_, request.service_name);
+    const auto entry = std::find(endpoint_range.first, endpoint_range.second,
+                                 searched_for_value);
+    if (entry != endpoint_range.second) {
+        return response;
+    } else {
+        this->server_.services_by_endpoint_.insert(endpoint_range.first,
+                                                   std::make_pair(this->current_endpoint_, request.service_name));
+        this->server_.services_.emplace(request.service_name, this->current_endpoint_);
+    }
 
     return response;
 }
@@ -177,8 +200,32 @@ mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::proto
 }
 
 mkdt::protocol::local_response
-mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::use_service_request &) {
+mkdt::router_server_spimpl::handle_request_visitor::operator()(const mkdt::protocol::use_service_request &request) {
     protocol::object_answer response{200, "OK"};
+
+    if (request.service_name.empty() || request.service_name == " ") {
+        response.request_in_general.code = 422;
+        response.request_in_general.text = "Does not support empty or blank service names";
+        return response;
+    }
+
+    auto service_endpoints_range = this->server_.services_.equal_range(request.service_name);
+    if (service_endpoints_range.first == service_endpoints_range.second) {
+        response.request_in_general.code = 404;
+        response.request_in_general.text = std::string{"Service \""} + request.service_name + "\" not found";
+        return response;
+    }
+    std::uniform_int_distribution<size_t> service_choosen_number_rd{0, static_cast<size_t>(//std::distance >= 0
+                                                                               std::distance(
+                                                                                       service_endpoints_range.first,
+                                                                                       service_endpoints_range.second)) -
+                                                                       1};
+    std::advance(service_endpoints_range.first, service_choosen_number_rd(
+            this->server_.default_random_engine_
+    ));
+    auto choosen_service_endpoint = service_endpoints_range.first->second;
+
+    //TODO response with object id
 
     return response;
 }

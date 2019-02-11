@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <memory>
 #include <deque>
+#include <unordered_map>
+#include <random>
 
 #include <boost/asio.hpp>
 
@@ -25,12 +27,21 @@ public:
 
     ~router_server_spimpl();
 
-    mkdt::protocol::local_response process_request(const mkdt::protocol::local_request &request);
-
 private:
     boost::asio::io_context &io_context_;
     boost::asio::ip::tcp::acceptor tcp_v4_;
     boost::asio::ip::tcp::acceptor tcp_v6_;
+    std::default_random_engine default_random_engine_;
+
+    struct tcp_connection;
+    using router_client_endpoint = std::shared_ptr<tcp_connection>;
+
+    mkdt::protocol::local_response process_request(const mkdt::protocol::local_request &request,
+                                                   router_client_endpoint endpoint_making_request);
+
+    using service_entry = router_client_endpoint;
+    std::unordered_multimap<std::string, service_entry> services_;
+    std::unordered_multimap<router_client_endpoint, std::string> services_by_endpoint_;
 
     struct tcp_connection : std::enable_shared_from_this<tcp_connection> {
         tcp_connection() = delete;
@@ -64,7 +75,8 @@ private:
     };
 
     struct handle_request_visitor : boost::static_visitor<mkdt::protocol::local_response> {
-        handle_request_visitor(router_server_spimpl &server) : server_(server) {}
+        handle_request_visitor(router_server_spimpl &server, router_client_endpoint current_endpoint)
+                : server_(server), current_endpoint_(current_endpoint) {}
 
         mkdt::protocol::local_response operator()(const protocol::register_service_message &);
 
@@ -80,6 +92,7 @@ private:
 
     private:
         router_server_spimpl &server_;
+        router_client_endpoint current_endpoint_;
     };
 
     void start_async_receive(boost::asio::ip::tcp::acceptor &acceptor);
