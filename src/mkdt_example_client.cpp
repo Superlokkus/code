@@ -22,8 +22,6 @@ const char *const menu_text{R"END_MENU_TEXT(
 Menu:
 =====
 quit
-disconnect
-reconnect
 ----------
 register service <name>
 use service <name>
