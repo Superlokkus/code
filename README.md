@@ -15,12 +15,26 @@ Demonstration usage
         a. local server should output protocol conversation
         b. example_client should report success
 
-#Building
-##Dependencies
+Building
+========
+Dependencies
+-------------
 To build this project following libraries are needed
 *   Boost >= 1.66
 
-##Project
+So to build and install the latest boost one could either use its package manager or for example:
+```
+cd /tmp/
+git clone https://github.com/boostorg/boost.git
+cd boost/
+git submodule update  --init --recursive
+./bootstrap.sh --prefix=$HOME
+./b2 
+./b2 install
+``` 
+
+Project
+--------
 Building is done via cmake.
 So after cloning one could for example
 ```
@@ -29,4 +43,8 @@ cd bin
 cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 ctest
+```
+or when boost is installed in a non standard directory, for example the home:
+```
+cmake -D"BOOST_ROOT"="~" -D"BOOST_LIBRARYDIR"="~/lib" -DCMAKE_BUILD_TYPE=Release ..
 ```
