@@ -31,7 +31,7 @@ public:
     void register_service(service_identifier service_id, std::function<void(error)> handler,
                           std::function<void(std::function<void(object_identifier)>)> new_service_request_handler);
 
-    void unregister_service(object_identifier object_id);
+    void unregister_service(service_identifier);
     /*!
      *
      * @param service_id
@@ -39,35 +39,25 @@ public:
      */
     void use_service_interface(service_identifier service_id, std::function<void(error, object_identifier)> handler);
 
-    /*!
-     * @tparam EndpointObject Must fullfill for values s of EndpointObject: s->receive(const std::string& message,
-     * const object_identifier& sender)
-     * @tparam IdentifierHandler h of Handler: h(error,object_identifier)
-     * @param service_id
-     * @param object
-     * @param handler
-     */
-    template<typename EndpointObject, typename IdentifierHandler>
-    void expose(service_identifier service_id, std::shared_ptr<EndpointObject> object, IdentifierHandler &&handler);
+    void expose(service_identifier service_id, std::shared_ptr<receiver> object,
+                std::function<void(error, object_identifier_voucher)> handler);
 
     /*!
-     *
-     * @param object
-     * @param handler
-     */
-    void consume(object_identifier object, std::function<void(error, bool, object_identifier)> handler);
+    *
+    * @param object
+    * @param handler
+    */
+    void consume(object_identifier_voucher object,
+                 std::function<void(error, boost::optional<object_identifier>)> handler);
 
 
     /*!
-     *
-     * @tparam CompletionHandler
      * @param receiver
      * @param message
      * @param handler
      */
-    template<typename CompletionHandler>
     void send_message_to_object(const object_identifier &receiver, const std::string &message,
-                                CompletionHandler &&handler);
+                                std::function<void(error)> handler);
 
 private:
     struct tcp_connection;

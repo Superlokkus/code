@@ -90,6 +90,12 @@ BOOST_FUSION_ADAPT_STRUCT(
 )
 
 BOOST_FUSION_ADAPT_STRUCT(
+        mkdt::object_identifier,
+        (mkdt::protocol::string, first)
+        (boost::uuids::uuid, second)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
         mkdt::protocol::unregister_service_message,
         (mkdt::protocol::string, magic_prefix)
                 (mkdt::service_identifier, service_name)
@@ -143,6 +149,9 @@ struct common_rules {
     boost::spirit::qi::rule<Iterator, boost::uuids::uuid()>
             uuid_{(boost::spirit::qi::lit("{") >> uuid_internal_ >> boost::spirit::qi::lit("}")) |
                   uuid_internal_};
+
+    boost::spirit::qi::rule<Iterator, mkdt::object_identifier()>
+            object_identifier_ = ns::string >> uuid_;
 
     boost::spirit::qi::rule<Iterator, mkdt::protocol::string()> quoted_string{
             ::boost::spirit::qi::lexeme['"'
@@ -257,6 +266,11 @@ struct common_generators {
             boost::spirit::karma::stream
     };
 
+    boost::spirit::karma::rule<OutputIterator, mkdt::object_identifier()>
+            object_identifier_{
+            boost::spirit::karma::string << " " << uuid_
+    };
+
     boost::spirit::karma::rule<OutputIterator, register_service_message()>
             register_service_message_{boost::spirit::skip[boost::spirit::karma::string] <<
                                                                                         boost::spirit::karma::lit(
@@ -285,14 +299,14 @@ struct common_generators {
             expose_object_message_{
             boost::spirit::karma::lit("expose_object_message: \"")
                     << boost::spirit::karma::string
-                    << "\"," << uuid_
+                    << "\"," << object_identifier_
     };
 
     boost::spirit::karma::rule<OutputIterator, consume_object_request()>
             consume_object_request_{
             boost::spirit::karma::lit("consume_object_request: \"")
                     << boost::spirit::karma::string
-                    << "\"," << uuid_
+                    << "\"," << object_identifier_
     };
 
     boost::spirit::karma::rule<OutputIterator, message_for_object()>

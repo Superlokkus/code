@@ -40,16 +40,6 @@ public:
 
     }
 
-    struct object {
-        virtual ~object() = default;
-    };
-
-    struct receiver : object {
-        ~receiver() override = default;
-
-        virtual void receive(const std::string &message, boost::optional<object_identifier> sender) = 0;
-    };
-
 
     /*!
      * @param service_id
@@ -66,20 +56,20 @@ public:
     void use_service_interface(service_identifier service_id, std::function<void(error, object_identifier)> handler);
 
     /*!
-     * @tparam IdentifierHandler h of Handler: h(error,object_identifier)
      * @param service_id
      * @param object
      * @param handler
      */
-    template<typename EndpointObject, typename IdentifierHandler>
-    void expose(service_identifier service_id, std::shared_ptr<receiver> object, IdentifierHandler &&handler);
+    void expose(service_identifier service_id, std::shared_ptr<receiver> object,
+            std::function<void(error, object_identifier_voucher)> handler);
 
     /*!
     *
     * @param object
     * @param handler
     */
-    void consume(object_identifier object, std::function<void(error, bool, object_identifier)> handler);
+    void consume(object_identifier_voucher object,
+            std::function<void(error, boost::optional<object_identifier>)> handler);
 
 
     /*!
